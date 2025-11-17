@@ -5,7 +5,8 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/YOUR_USERNAME/YOUR_REPONAME/actions)
 
-** Under Development **
+
+# **Under Development**
 
 The Big Idea: A simple, command-line tool to run a comprehensive health check and audit on any website.
 
@@ -35,21 +36,74 @@ The goal is to create a simple, free tool that anyone can use to get a deep-leve
 
 This project is a "meta-tool" that couldn't exist without these amazing free services and open-source projects.
 
-| Tool | Purpose | Type |
 
-| Google PageSpeed Insights | Performance (Lighthouse) | API |
+<table>
+  <tr>
+   <td><strong>Tool</strong>
+   </td>
+   <td><strong>Purpose</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+  </tr>
+  <tr>
+   <td><a href="https://developers.google.com/speed/docs/insights/v5/get-started">Google PageSpeed Insights</a>
+   </td>
+   <td>Performance (Lighthouse)
+   </td>
+   <td>API
+   </td>
+  </tr>
+  <tr>
+   <td><a href="https://web-check.xyz/web-check-api">web-check.xyz</a>
+   </td>
+   <td>General Tech Stack & Trackers
+   </td>
+   <td>API
+   </td>
+  </tr>
+  <tr>
+   <td><a href="https://github.com/juerkkil/secheaders">secheaders</a>
+   </td>
+   <td>Security Headers
+   </td>
+   <td>Local Tool
+   </td>
+  </tr>
+  <tr>
+   <td><a href="https://github.com/testssl/testssl.sh">testssl.sh</a>
+   </td>
+   <td>SSL/TLS Config
+   </td>
+   <td>Local Tool
+   </td>
+  </tr>
+  <tr>
+   <td>nmap
+   </td>
+   <td>Network & Port Scan
+   </td>
+   <td>Local Tool
+   </td>
+  </tr>
+  <tr>
+   <td>LinkChecker
+   </td>
+   <td>Broken Links
+   </td>
+   <td>Python Library
+   </td>
+  </tr>
+  <tr>
+   <td>dnspython
+   </td>
+   <td>DNS Records
+   </td>
+   <td>Python Library
+   </td>
+  </tr>
+</table>
 
-| web-check.xyz | General Tech Stack & Trackers | API |
-
-| secheaders | Security Headers | Local Tool |
-
-| testssl.sh | SSL/TLS Config | Local Tool |
-
-| nmap | Network & Port Scan | Local Tool |
-
-| LinkChecker | Broken Links | Python Library |
-
-| dnspython | DNS Records | Python Library |
 
 
 ## 🚀 Getting Started
@@ -69,17 +123,15 @@ You will need to have Python 3.9+ installed, as well as the following command-li
 
 
 
-1. **Clone this repo:**
+1. **Clone this repo:** 
 ```bash
-git clone https://github.com/KnowOneActual/web-health-scanner.git
-cd web-health-scanner
+git clone https://github.com/KnowOneActual/web-health-scanner.git)
+cd web-health-scanner 
 ```
 
-2. **Clone testssl.sh:**
-```bash
+2. **Clone testssl.sh:** 
 git clone https://github.com/testssl/testssl.sh.git
 ```
-
 3. **Install Python requirements:**
 ```bash
 pip install -r requirements.txt
@@ -91,20 +143,30 @@ The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
     * Create a new project (or select an existing one).
     * Click "Create Credentials" -> "API key".
     * Copy the generated key.
-    * You must also [enable the PageSpeed Insights API](https://www.google.com/search?q=https://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com) for your project.
+    * You must also [enable the PageSpeed Insights API](https://www.google.com/search?q=httpsD://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com) for your project.
 
 
 ## Usage
 
-Run the scanner with your API key:
-
-python scanner.py [https://example.com](https://example.com) --output report.json --api-key "YOUR_API_KEY_HERE" \
+Run the scanner.
 
 
-Alternatively, you can set the key as an environment variable to avoid typing it:
+### Method 1: Environment Variable (Recommended & Secure)
 
-export PAGESPEED_API_KEY="YOUR_API_KEY_HERE" \
-python scanner.py [https://example.com](https://example.com) \
+You can set the key as an environment variable to avoid it being saved in your shell history.
+```bash
+export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
+python scanner.py https://example.com
+```
+
+
+### Method 2: Command-Line Flag (Less Secure)
+
+You can also pass the key as a flag, but be aware that it will be saved in your shell's history. (Be please exercise caution with your API keys!)
+
+```bash
+python scanner.py [https://example.com](https://example.com) --output report.json --api-key "YOUR_API_KEY_HERE"
+```
 
 
 

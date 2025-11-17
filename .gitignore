@@ -156,3 +156,12 @@ raycast
 fzf
 history.txt
 GEMINI.md
+
+Generated output
+
+*.json
+report.json
+
+Cloned dependencies
+
+testssl.sh/
