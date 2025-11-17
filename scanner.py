@@ -5,8 +5,8 @@ import subprocess
 import sys
 import requests
 import dns.resolver
-import tempfile # <-- ADD THIS IMPORT
-from urllib.parse import urlparse # <-- IMPORT ADDED
+import tempfile 
+from urllib.parse import urlparse 
 
 # --- Configuration ---
 # We can move these to a config file later
@@ -18,13 +18,13 @@ SECHEADERS_PATH = "secheaders" # Assumes it's in the system PATH
 
 # --- Helper Functions ---
 
-def run_subprocess(command):
+def run_subprocess(command, timeout=60):
     """A helper to run shell commands and return their output."""
     try:
         # We use 'capture_output=True' to get stdout/stderr
         # 'text=True' gives us strings instead of bytes
         # 'check=True' will raise an error if the command fails
-        result = subprocess.run(command, capture_output=True, text=True, check=True, encoding='utf-8')
+        result = subprocess.run(command, capture_output=True, text=True, check=True, encoding='utf-8', timeout=timeout)
         
         # Handle commands that might output to stderr
         if result.stderr and not result.stdout:
@@ -32,6 +32,9 @@ def run_subprocess(command):
             return result.stderr.strip()
             
         return result.stdout.strip()
+    except subprocess.TimeoutExpired:
+        print(f"[Error] Command '{' '.join(command)}' timed out after {timeout} seconds.", file=sys.stderr)
+        return None
     except subprocess.CalledProcessError as e:
         print(f"[Error] Command '{' '.join(e.cmd)}' failed with exit code {e.returncode}.", file=sys.stderr)
         print(f"Stdout: {e.stdout}", file=sys.stderr)
@@ -72,8 +75,13 @@ def get_web_check(target_url):
                 print(f"[Error] Failed to decode JSON from web-check API.", file=sys.stderr)
                 return {"status": "error", "details": "Failed to decode API JSON response."}
         else:
-            # Handle API errors
-            print(f"[Error] web-check API returned status code {response.status_code}: {response.text}", file=sys.stderr)
+            # UPDATED: Handle 403 Cloudflare errors cleanly
+            if response.status_code == 403 and "Just a moment..." in response.text:
+                print(f"[Error] web-check API returned a 403 (Cloudflare block). Scan skipped.", file=sys.stderr)
+                return {"status": "error", "details": "API scan blocked by Cloudflare."}
+            
+            # Handle other API errors
+            print(f"[Error] web-check API returned status code {response.status_code}", file=sys.stderr)
             return {"status": "error", "details": f"API returned status {response.status_code}"}
             
     except requests.exceptions.RequestException as e:
@@ -102,7 +110,8 @@ def get_secheaders(target_url):
     
     command = [SECHEADERS_PATH, '--json', target_url]
     
-    raw_output = run_subprocess(command)
+    # Give this a 30-second timeout
+    raw_output = run_subprocess(command, timeout=30)
     
     if raw_output:
         try:
@@ -117,7 +126,8 @@ def get_secheaders(target_url):
 
 def get_testssl(target_url):
     """Runs the testssl.sh script."""
-    print(f"[INFO] Running testssl.sh scan on {target_url}...")
+    # UPDATED: More informative print
+    print(f"[INFO] Running testssl.sh scan on {target_url}... (this may take several minutes)...")
     
     # Check if the script exists first
     if not os.path.isfile(TESTSSL_PATH):
@@ -140,7 +150,8 @@ def get_testssl(target_url):
         # Build the command. --quiet suppresses the banner. -oJ writes JSON to our temp file
         command = [TESTSSL_PATH, "--quiet", "-oJ", tmp_file_path, hostname]
         
-        raw_output = run_subprocess(command)
+        # UPDATED: Give this a long timeout (300 seconds / 5 minutes)
+        raw_output = run_subprocess(command, timeout=300)
         
         if raw_output is None:
              # run_subprocess failed and already printed an error
