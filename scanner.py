@@ -5,9 +5,10 @@ import subprocess
 import sys
 import requests
 import dns.resolver
+from urllib.parse import urlparse # <-- IMPORT ADDED
 
 # --- Configuration ---
-# these can be move these to a config file later
+# We can move these to a config file later
 TESTSSL_PATH = "./testssl.sh/testssl.sh"
 BLACKLIGHT_PATH = "blacklight-query" # Assumes it's in the system PATH
 NMAP_PATH = "nmap" # Assumes it's in the system PATH
@@ -48,8 +49,40 @@ def run_subprocess(command):
 def get_web_check(target_url):
     """Fetches data from the web-check.xyz API."""
     print(f"[INFO] Running web-check scan on {target_url}...")
-    # This is a placeholder. We will implement this next.
-    return {"status": "pending", "details": "web-check.xyz scan not yet implemented."}
+    
+    try:
+        # Extract the domain (hostname) from the full URL
+        parsed_url = urlparse(target_url)
+        domain = parsed_url.hostname
+        if not domain:
+            return {"status": "error", "details": "Could not parse domain from URL."}
+
+        api_url = f"https://web-check.xyz/api/scan?url={domain}"
+        
+        # Set a reasonable timeout
+        response = requests.get(api_url, timeout=30)
+        
+        # Check for a successful response
+        if response.status_code == 200:
+            try:
+                # Return the parsed JSON data
+                return response.json()
+            except json.JSONDecodeError:
+                print(f"[Error] Failed to decode JSON from web-check API.", file=sys.stderr)
+                return {"status": "error", "details": "Failed to decode API JSON response."}
+        else:
+            # Handle API errors
+            print(f"[Error] web-check API returned status code {response.status_code}: {response.text}", file=sys.stderr)
+            return {"status": "error", "details": f"API returned status {response.status_code}"}
+            
+    except requests.exceptions.RequestException as e:
+        # Handle network or request errors
+        print(f"[Error] Network error during web-check scan: {e}", file=sys.stderr)
+        return {"status": "error", "details": str(e)}
+    except Exception as e:
+        # Handle any other unexpected errors
+        print(f"[Error] An unexpected error occurred in get_web_check: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def get_pagespeed(target_url):
     """Fetches data from the Google PageSpeed Insights API."""
@@ -65,7 +98,21 @@ def get_blacklight(target_url):
 def get_secheaders(target_url):
     """Runs the secheaders tool."""
     print(f"[INFO] Running security headers scan on {target_url}...")
-    return {"status": "pending", "details": "secheaders scan not yet implemented."}
+    
+    command = [SECHEADERS_PATH, '--json', target_url]
+    
+    raw_output = run_subprocess(command)
+    
+    if raw_output:
+        try:
+            # The --json flag returns a JSON object
+            return json.loads(raw_output)
+        except json.JSONDecodeError:
+            print(f"[Error] Failed to decode JSON from secheaders.", file=sys.stderr)
+            return {"status": "error", "details": "Failed to decode secheaders JSON output."}
+    else:
+        # run_subprocess already printed the error
+        return {"status": "error", "details": "secheaders command failed or returned no output."}
 
 def get_testssl(target_url):
     """Runs the testssl.sh script."""
