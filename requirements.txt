@@ -1,3 +1,4 @@
+
 #For making API requests
 requests
 #For advanced DNS lookups
@@ -6,5 +7,7 @@ dnspython
 LinkChecker
 #For checking security headers (local tool)
 secheaders
-
-blacklight-query
+#For parsing HTML to find links
+beautifulsoup4
+#For fast HTML parsing
+lxml

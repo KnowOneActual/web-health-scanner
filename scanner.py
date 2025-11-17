@@ -6,9 +6,11 @@ import sys
 import requests
 import dns.resolver
 import tempfile 
-from urllib.parse import urlparse 
+from urllib.parse import urlparse, urljoin # Added urljoin
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from bs4 import BeautifulSoup # Added for new link checker
+# REMOVED: linkcheck.checker and linkcheck.linkdb
 
 # --- Configuration ---
 # Paths to local tools
@@ -16,10 +18,9 @@ from datetime import datetime
 TESTSSL_PATH = "./testssl.sh/testssl.sh"
 # Assumes nmap is in the system's PATH
 NMAP_PATH = "nmap"
-# Assumes blacklight-query is in the system's PATH
-BLACKLIGHT_PATH = "blacklight-query"
 # Assumes secheaders is installed via pip and in the system's PATH
 SECHEADERS_PATH = "secheaders"
+# REMOVED: LINKCHECKER_PATH is no longer needed
 
 # --- Helper Functions ---
 
@@ -47,7 +48,10 @@ def run_subprocess(command, timeout=60):
         return None
     except FileNotFoundError:
         # This catches errors where the command isn't installed or not in PATH
-        print(f"[Error] Command not found: {command[0]}. Is it installed and in your PATH?", file=sys.stderr)
+        print(f"[Error] Command not found: {command[0]}.", file=sys.stderr)
+        print(f"       Is it installed and in your system's PATH?", file=sys.stderr)
+        print(f"       (e.g., for nmap: 'brew install nmap' or 'apt-get install nmap')", file=sys.stderr)
+        # Removed blacklight-query error message
         return None
     except Exception as e:
         print(f"[Error] An unexpected error occurred with subprocess: {e}", file=sys.stderr)
@@ -106,18 +110,29 @@ def get_web_check(target_url):
             
         api_url = f"https{':'}//api.web-check.xyz/api/scan?url={domain}"
         
+        # UPDATED: Add a User-Agent header to look like a browser
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+        }
+        
         # Give a 30-second timeout for the API
-        response = requests.get(api_url, timeout=30)
+        response = requests.get(api_url, headers=headers, timeout=30)
         
         # Check for a successful response
         if response.status_code == 200:
             try:
-                return response.json()
+                # If we get a 200, but it's still the Cloudflare page, it's a "soft" block.
+                text_response = response.text
+                if "Just a moment..." in text_response or "Enable JavaScript and cookies" in text_response:
+                    print(f"[Error] web-check API returned a 200 but is still Cloudflare blocked. Scan skipped.", file=sys.stderr)
+                    return {"status": "error", "details": "API scan blocked by Cloudflare."}
+                
+                return json.loads(text_response)
             except json.JSONDecodeError:
                 print(f"[Error] Failed to decode JSON from web-check API.", file=sys.stderr)
                 return {"status": "error", "details": "Failed to decode API JSON response."}
         else:
-            # UPDATED: Handle 403 Cloudflare errors cleanly
+            # Handle 403 Cloudflare errors
             if response.status_code == 403 and "Just a moment..." in response.text:
                 print(f"[Error] web-check API returned a 403 (Cloudflare block). Scan skipped.", file=sys.stderr)
                 return {"status": "error", "details": "API scan blocked by Cloudflare."}
@@ -130,33 +145,48 @@ def get_web_check(target_url):
         print(f"[Error] Could not connect to web-check API: {e}", file=sys.stderr)
         return {"status": "error", "details": f"API request failed: {str(e)}"}
 
-def get_pagespeed(target_url):
+def get_pagespeed(target_url, api_key):
     """Runs the Google PageSpeed Insights scan."""
     print(f"[INFO] Running PageSpeed scan on {target_url}...")
-    # TODO: Implement PageSpeed API call
-    # This will require an API key. We need to decide how to provide it.
-    return {"status": "pending", "details": "PageSpeed scan not yet implemented."}
+    
+    # If no API key is provided, skip the scan.
+    if not api_key:
+        print("       [INFO] No PageSpeed API key provided. Skipping scan.")
+        print("       [INFO] Get a key: https://developers.google.com/speed/docs/insights/v5/get-started")
+        return {"status": "skipped", "details": "No API key provided."}
 
-def get_blacklight(target_url):
-    """Runs the blacklight-query tool."""
-    print(f"[INFO] Running Blacklight scan on {target_url}...")
+    # The Google PageSpeed API endpoint
+    api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
     
-    command = [BLACKLIGHT_PATH, '--json', target_url]
+    # Parameters for the API
+    params = {
+        'url': target_url,
+        'key': api_key,
+        'strategy': 'DESKTOP',  # We can run 'MOBILE' as well, but let's start with one
+        'category': ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO']
+    }
     
-    # Give this a 60-second timeout (it can be a bit slow)
-    raw_output = run_subprocess(command, timeout=60)
-    
-    if raw_output:
-        try:
-            # Blacklight-query outputs JSON lines (multiple JSON objects)
-            # We'll parse the last line, which contains the summary
-            last_line = raw_output.strip().split('\n')[-1]
-            return json.loads(last_line)
-        except json.JSONDecodeError:
-            print(f"[Error] Failed to decode JSON from blacklight-query.", file=sys.stderr)
-            return {"status": "error", "details": "Failed to decode blacklight-query JSON."}
-    
-    return {"status": "error", "details": "blacklight-query command failed."}
+    try:
+        response = requests.get(api_url, params=params, timeout=60)
+        
+        if response.status_code == 200:
+            return response.json()
+        else:
+            # Try to parse the error message from Google
+            try:
+                error_data = response.json()
+                error_msg = error_data.get("error", {}).get("message", response.text)
+                print(f"[Error] PageSpeed API failed: {error_msg}", file=sys.stderr)
+                return {"status": "error", "details": f"API Error: {error_msg}"}
+            except json.JSONDecodeError:
+                print(f"[Error] PageSpeed API returned status {response.status_code}", file=sys.stderr)
+                return {"status": "error", "details": f"API returned status {response.status_code}"}
+                
+    except requests.exceptions.RequestException as e:
+        print(f"[Error] Could not connect to PageSpeed API: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"API request failed: {str(e)}"}
+
+# REMOVED: get_blacklight(target_url) function was here
 
 def get_secheaders(target_url):
     """Runs the secheaders tool."""
@@ -248,10 +278,91 @@ def get_nmap(target_url):
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def get_linkchecker(target_url):
-    """Runs the LinkChecker tool."""
-    print(f"[INFO] Running linkchecker scan on {target_url}...")
-    # TODO: Implement LinkChecker library call
-    return {"status": "pending", "details": "linkchecker scan not yet implemented."}
+    """
+    Finds and checks all links on the target_url page.
+    This is a new implementation using requests and BeautifulSoup.
+    """
+    print(f"[INFO] Running link scan on {target_url}...")
+    
+    results = {
+        "status": "pending",
+        "summary": {},
+        "all_links": [],
+        "broken_links": []
+    }
+    
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+    }
+
+    try:
+        # 1. Fetch the page
+        response = requests.get(target_url, headers=headers, timeout=10)
+        if response.status_code >= 400:
+            return {"status": "error", "details": f"Target URL returned status {response.status_code}"}
+        
+        # 2. Parse the HTML
+        soup = BeautifulSoup(response.text, 'lxml')
+        
+        # 3. Find all <a> tags with an href attribute
+        links_found = soup.find_all('a', href=True)
+        
+        link_urls = set() # Use a set to avoid checking the same link multiple times
+        
+        for link in links_found:
+            href = link['href']
+            
+            # Ignore anchors, mailto, etc.
+            if not href or href.startswith(('#', 'mailto:', 'tel:')):
+                continue
+                
+            # Make the URL absolute (e.g., /about -> https://example.com/about)
+            absolute_url = urljoin(target_url, href)
+            link_urls.add(absolute_url)
+
+        results["summary"]["total_links_found"] = len(link_urls)
+        
+        # 4. Check each link
+        for url in link_urls:
+            link_status = {
+                "url": url,
+                "status_code": 0,
+                "status": "pending"
+            }
+            try:
+                # We use a HEAD request for speed - it just gets headers, not the whole page
+                # We also set a short timeout
+                head_response = requests.head(url, headers=headers, timeout=5, allow_redirects=True)
+                link_status["status_code"] = head_response.status_code
+                
+                if head_response.status_code >= 400:
+                    link_status["status"] = "broken"
+                    results["broken_links"].append(link_status)
+                else:
+                    link_status["status"] = "valid"
+                    
+            except requests.exceptions.Timeout:
+                link_status["status"] = "broken"
+                link_status["details"] = "Request timed out"
+                results["broken_links"].append(link_status)
+            except requests.exceptions.RequestException as e:
+                # e.g., ConnectionError, TooManyRedirects
+                link_status["status"] = "broken"
+                link_status["details"] = str(e)
+                results["broken_links"].append(link_status)
+            
+            results["all_links"].append(link_status)
+
+        results["status"] = "success"
+        results["summary"]["broken_count"] = len(results["broken_links"])
+        return results
+
+    except requests.exceptions.RequestException as e:
+        print(f"[Error] Failed to fetch target URL for link check: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"Failed to fetch {target_url}: {str(e)}"}
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in get_linkchecker: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def get_dns_records(target_url):
     """Runs dnspython queries."""
@@ -300,6 +411,9 @@ def main():
     parser = argparse.ArgumentParser(description="Run a full website health check.")
     parser.add_argument("url", type=str, help="The target URL to scan (e.g., https://example.com)")
     parser.add_argument("--output", type=str, default="report.json", help="The filename for the JSON output report.")
+    # Add the API key argument
+    parser.add_argument("--api-key", type=str, default=os.environ.get('PAGESPEED_API_KEY'), 
+                        help="Google PageSpeed API key. Can also be set via PAGESPEED_API_KEY environment variable.")
     args = parser.parse_args()
 
     # Add 'https://' if no scheme is provided
@@ -318,8 +432,10 @@ def main():
 
     # Run each scan
     master_report["reports"]["web_check"] = get_web_check(args.url)
-    master_report["reports"]["pagespeed"] = get_pagespeed(args.url)
-    master_report["reports"]["blacklight"] = get_blacklight(args.url)
+    # Pass the API key to the function
+    master_report["reports"]["pagespeed"] = get_pagespeed(args.url, args.api_key)
+    # REMOVED: Blacklight call
+    # master_report["reports"]["blacklight"] = get_blacklight(args.url)
     master_report["reports"]["security_headers"] = get_secheaders(args.url)
     
     # --- Skipping long-running scan ---
@@ -328,8 +444,8 @@ def main():
     # master_report["reports"]["testssl"] = get_testssl(args.url)
     
     master_report["reports"]["nmap"] = get_nmap(args.url)
-    master_key = "linkchecker"
-    master_report["reports"][master_key] = get_linkchecker(args.url)
+    # UPDATED: Cleaned up this line
+    master_report["reports"]["linkchecker"] = get_linkchecker(args.url)
     master_report["reports"]["dns"] = get_dns_records(args.url)
 
     # Set the timestamp

@@ -17,15 +17,15 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 
 
 
-* [ ] **Setup:** Create scanner.py with argparse to accept a URL and an output file.
-* [ ] **Setup:** Create requirements.txt with initial libraries (requests, dnspython, LinkChecker, secheaders).
-* [ ] **API Call:** Implement web-check.xyz API call.
-* [ ] **API Call:** Implement Google PageSpeed Insights API call.
-* [ ] **Subprocess:** Implement secheaders call and capture JSON.
-* [ ] **Subprocess:** Implement testssl.sh call and capture JSON.
-* [ ] **Subprocess:** Implement nmap call and capture XML.
-* [ ] **Library:** Implement dnspython to get all major DNS records.
-* [ ] **Library:** Implement LinkChecker basics to crawl a site.
+* [X] **Setup:** Create scanner.py with argparse to accept a URL and an output file.
+* [X] **Setup:** Create requirements.txt with initial libraries.
+* [ ] **API Call:** Implement web-check.xyz API call. (Blocked, needs alternative)
+* [X] **API Call:** Implement Google PageSpeed Insights API call.
+* [X] **Subprocess:** Implement secheaders call and capture JSON.
+* [ ] **Subprocess:** Implement testssl.sh call and capture JSON. (Skipped for now)
+* [X] **Subprocess:** Implement nmap call and capture XML.
+* [X] **Library:** Implement dnspython to get all major DNS records.
+* [X] **Library:** Implement custom link checker.
 
 
 ### v0.2: Data Consolidation & Parsing

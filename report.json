@@ -1,6 +1,6 @@
 {
     "scan_target": "https://beaubremer.com",
-    "scan_timestamp": "2025-11-17T16:26:36.106588",
+    "scan_timestamp": "2025-11-17T16:50:24.796200",
     "reports": {
         "web_check": {
             "status": "error",
@@ -9,10 +9,6 @@
         "pagespeed": {
             "status": "pending",
             "details": "PageSpeed scan not yet implemented."
-        },
-        "blacklight": {
-            "status": "error",
-            "details": "blacklight-query command failed."
         },
         "security_headers": {
             "target": "https://beaubremer.com",
@@ -117,8 +113,129 @@
             ]
         },
         "linkchecker": {
-            "status": "pending",
-            "details": "linkchecker scan not yet implemented."
+            "status": "success",
+            "summary": {
+                "total_links_found": 23,
+                "broken_count": 0
+            },
+            "all_links": [
+                {
+                    "url": "https://coolors.co/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/assets/downloads/pdf/Wireshark_Quick_Start_Guide.pdf",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/trends",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://feathericons.com/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://www.calculator.net/ohms-law-calculator.html",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/my_ip",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/privacy",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://github.com/KnowOneActual",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://wirelesssystembuilder.com/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://blog.beaubremer.com/posts/Simple_IP_Planner/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://blog.beaubremer.com/posts/idea_to_ai/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/technology_security",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/toolbag",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://github.com/KnowOneActual/python-image-processor",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/ip_subnet_calculator",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://github.com/KnowOneActual/Network-Triage-Tool",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/network_latency_monitor",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://blog.beaubremer.com/posts/iimage_cleaner_on_a_tor_onion_service/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://github.com/KnowOneActual?tab=repositories",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/assets/downloads/pdf/A_Simple_Guide_to_Creating_Gmail_Filters_for_Spam.pdf",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://blog.beaubremer.com/",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://beaubremer.com/weather",
+                    "status_code": 200,
+                    "status": "valid"
+                },
+                {
+                    "url": "https://github.com/KnowOneActual/py_file_encrypt_tool",
+                    "status_code": 200,
+                    "status": "valid"
+                }
+            ],
+            "broken_links": []
         },
         "dns": {
             "status": "success",
