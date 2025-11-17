@@ -71,8 +71,8 @@ You will need to have Python 3.9+ installed, as well as the following command-li
 
 1. **Clone this repo:**
 ```bash
-git clone https://github.com/KnowOneActual/web-health-scanner
-cd YOUR_REPONAME
+git clone https://github.com/KnowOneActual/web-health-scanner.git
+cd web-health-scanner
 ```
 
 2. **Clone testssl.sh:**
