@@ -7,6 +7,8 @@ import requests
 import dns.resolver
 import tempfile 
 from urllib.parse import urlparse 
+import xml.etree.ElementTree as ET
+from datetime import datetime
 
 # --- Configuration ---
 # Paths to local tools
@@ -50,6 +52,45 @@ def run_subprocess(command, timeout=60):
     except Exception as e:
         print(f"[Error] An unexpected error occurred with subprocess: {e}", file=sys.stderr)
         return None
+
+def parse_nmap_xml(xml_output):
+    """Parses nmap's XML output into a simpler dict."""
+    try:
+        root = ET.fromstring(xml_output)
+        host = root.find('host')
+        if host is None:
+            return {"status": "error", "details": "No host information found in nmap output."}
+
+        host_status = host.find('status').get('state', 'unknown')
+        ports = []
+        port_elements = host.findall('.//port')
+
+        for port in port_elements:
+            port_state = port.find('state')
+            if port_state is not None and port_state.get('state') == 'open':
+                service = port.find('service')
+                port_info = {
+                    "portid": port.get('portid'),
+                    "protocol": port.get('protocol'),
+                    "state": port_state.get('state'),
+                    "service": service.get('name', 'unknown') if service is not None else 'unknown',
+                    "product": service.get('product', '') if service is not None else '',
+                    "version": service.get('version', '') if service is not None else ''
+                }
+                ports.append(port_info)
+        
+        return {
+            "status": "success",
+            "host_status": host_status,
+            "open_ports": ports
+        }
+
+    except ET.ParseError:
+        print("[Error] Failed to parse nmap XML output.", file=sys.stderr)
+        return {"status": "error", "details": "Failed to parse nmap XML."}
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in parse_nmap_xml: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"XML parsing error: {str(e)}"}
 
 # --- Scan Functions ---
 
@@ -167,10 +208,29 @@ def get_testssl(target_url):
 def get_nmap(target_url):
     """Runs a basic nmap scan."""
     print(f"[INFO] Running nmap scan on {target_url}...")
-    # TODO: Implement nmap subprocess call
-    # We need to decide on safe, default flags. e.g., -sV
-    # And we need to parse the XML output.
-    return {"status": "pending", "details": "nmap scan not yet implemented."}
+    
+    try:
+        parsed_url = urlparse(target_url)
+        hostname = parsed_url.hostname
+        if not hostname:
+            return {"status": "error", "details": "Could not parse domain from URL."}
+
+        # -F: Fast scan (top 100 ports)
+        # -sV: Service version detection
+        # -oX -: Output XML to stdout
+        command = [NMAP_PATH, "-F", "-sV", "-oX", "-", hostname]
+        
+        # Give nmap 2 minutes (120 seconds)
+        raw_output = run_subprocess(command, timeout=120)
+        
+        if raw_output:
+            return parse_nmap_xml(raw_output)
+        
+        return {"status": "error", "details": "nmap command failed or returned no output."}
+
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in get_nmap: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def get_linkchecker(target_url):
     """Runs the LinkChecker tool."""
@@ -254,11 +314,11 @@ def main():
     
     master_report["reports"]["nmap"] = get_nmap(args.url)
     master_key = "linkchecker"
-    master_report["reports"][master_key] = get_linkchecker(args.url)
+    master_report["reports"]["linkchecker"] = get_linkchecker(args.url)
     master_report["reports"]["dns"] = get_dns_records(args.url)
 
-    # TODO: Set a real timestamp
-    master_report["scan_timestamp"] = "TODO"
+    # Set the timestamp
+    master_report["scan_timestamp"] = datetime.now().isoformat()
 
     # Write the final report to a file
     try:
