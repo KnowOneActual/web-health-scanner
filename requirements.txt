@@ -6,3 +6,5 @@ dnspython
 LinkChecker
 #For checking security headers (local tool)
 secheaders
+
+blacklight-query

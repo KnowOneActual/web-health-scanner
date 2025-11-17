@@ -7,7 +7,7 @@
 
 ** Under Development **
 
-The idea: A simple, all-in-one command-line tool to run a comprehensive health check and audit on any website.
+The Big Idea: A simple, command-line tool to run a comprehensive health check and audit on any website.
 
 
 ## About The Project
@@ -56,17 +56,9 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
   <tr>
    <td><a href="https://web-check.xyz/web-check-api">web-check.xyz</a>
    </td>
-   <td>General Tech Stack
+   <td>General Tech Stack & Trackers
    </td>
    <td>API
-   </td>
-  </tr>
-  <tr>
-   <td><a href="https://github.com/the-markup/blacklight-query">blacklight-query</a>
-   </td>
-   <td>Privacy & Trackers
-   </td>
-   <td>Local Tool
    </td>
   </tr>
   <tr>
@@ -86,11 +78,11 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
    </td>
   </tr>
   <tr>
-   <td>*
-   </td>
    <td>nmap
    </td>
    <td>Network & Port Scan
+   </td>
+   <td>Local Tool
    </td>
   </tr>
   <tr>

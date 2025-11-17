@@ -1,6 +1,6 @@
 {
     "scan_target": "https://beaubremer.com",
-    "scan_timestamp": "TODO",
+    "scan_timestamp": "2025-11-17T16:26:36.106588",
     "reports": {
         "web_check": {
             "status": "error",
@@ -11,8 +11,8 @@
             "details": "PageSpeed scan not yet implemented."
         },
         "blacklight": {
-            "status": "pending",
-            "details": "Blacklight scan not yet implemented."
+            "status": "error",
+            "details": "blacklight-query command failed."
         },
         "security_headers": {
             "target": "https://beaubremer.com",
@@ -79,8 +79,42 @@
             "details": "Scan skipped by default in script."
         },
         "nmap": {
-            "status": "pending",
-            "details": "nmap scan not yet implemented."
+            "status": "success",
+            "host_status": "up",
+            "open_ports": [
+                {
+                    "portid": "80",
+                    "protocol": "tcp",
+                    "state": "open",
+                    "service": "http",
+                    "product": "Cloudflare http proxy",
+                    "version": ""
+                },
+                {
+                    "portid": "443",
+                    "protocol": "tcp",
+                    "state": "open",
+                    "service": "http",
+                    "product": "Cloudflare http proxy",
+                    "version": ""
+                },
+                {
+                    "portid": "8080",
+                    "protocol": "tcp",
+                    "state": "open",
+                    "service": "http",
+                    "product": "Cloudflare http proxy",
+                    "version": ""
+                },
+                {
+                    "portid": "8443",
+                    "protocol": "tcp",
+                    "state": "open",
+                    "service": "http",
+                    "product": "Cloudflare http proxy",
+                    "version": ""
+                }
+            ]
         },
         "linkchecker": {
             "status": "pending",
@@ -111,7 +145,7 @@
                     "desiree.ns.cloudflare.com."
                 ],
                 "SOA": [
-                    "desiree.ns.cloudflare.com. dns.cloudflare.com. 2388885336 10000 2400 604800 1800"
+                    "desiree.ns.cloudflare.com. dns.cloudflare.com. 2388903805 10000 2400 604800 1800"
                 ],
                 "CNAME": []
             }

@@ -140,8 +140,23 @@ def get_pagespeed(target_url):
 def get_blacklight(target_url):
     """Runs the blacklight-query tool."""
     print(f"[INFO] Running Blacklight scan on {target_url}...")
-    # TODO: Implement blacklight-query subprocess call
-    return {"status": "pending", "details": "Blacklight scan not yet implemented."}
+    
+    command = [BLACKLIGHT_PATH, '--json', target_url]
+    
+    # Give this a 60-second timeout (it can be a bit slow)
+    raw_output = run_subprocess(command, timeout=60)
+    
+    if raw_output:
+        try:
+            # Blacklight-query outputs JSON lines (multiple JSON objects)
+            # We'll parse the last line, which contains the summary
+            last_line = raw_output.strip().split('\n')[-1]
+            return json.loads(last_line)
+        except json.JSONDecodeError:
+            print(f"[Error] Failed to decode JSON from blacklight-query.", file=sys.stderr)
+            return {"status": "error", "details": "Failed to decode blacklight-query JSON."}
+    
+    return {"status": "error", "details": "blacklight-query command failed."}
 
 def get_secheaders(target_url):
     """Runs the secheaders tool."""
@@ -270,7 +285,7 @@ def get_dns_records(target_url):
                 results[rtype] = ["Query timed out."]
             except Exception as e:
                 # Catch other DNS errors
-                print(f"[Warning] DNS query for {rtype} failed: {e}", file=sys.stderr)
+                print(f"Warning] DNS query for {rtype} failed: {e}", file=sys.stderr)
                 results[rtype] = [f"Query failed: {str(e)}"]
                 
         return {"status": "success", "data": results}
@@ -314,7 +329,7 @@ def main():
     
     master_report["reports"]["nmap"] = get_nmap(args.url)
     master_key = "linkchecker"
-    master_report["reports"]["linkchecker"] = get_linkchecker(args.url)
+    master_report["reports"][master_key] = get_linkchecker(args.url)
     master_report["reports"]["dns"] = get_dns_records(args.url)
 
     # Set the timestamp
