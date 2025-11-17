@@ -1,0 +1,8 @@
+#For making API requests
+requests
+#For advanced DNS lookups
+dnspython
+#For finding broken links
+LinkChecker
+#For checking security headers (local tool)
+secheaders
