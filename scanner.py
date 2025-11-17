@@ -5,6 +5,7 @@ import subprocess
 import sys
 import requests
 import dns.resolver
+import tempfile # <-- ADD THIS IMPORT
 from urllib.parse import urlparse # <-- IMPORT ADDED
 
 # --- Configuration ---
@@ -117,9 +118,54 @@ def get_secheaders(target_url):
 def get_testssl(target_url):
     """Runs the testssl.sh script."""
     print(f"[INFO] Running testssl.sh scan on {target_url}...")
-    # We must strip https:// from the URL for testssl.sh
-    # We will need to add logic for this.
-    return {"status": "pending", "details": "testssl.sh scan not yet implemented."}
+    
+    # Check if the script exists first
+    if not os.path.isfile(TESTSSL_PATH):
+        print(f"[Error] testssl.sh not found at: {TESTSSL_PATH}", file=sys.stderr)
+        print("Please clone it from GitHub into the correct directory (e.g., 'git clone https://github.com/testssl/testssl.sh.git').", file=sys.stderr)
+        return {"status": "error", "details": "testssl.sh script not found."}
+
+    tmp_file_path = None
+    try:
+        parsed_url = urlparse(target_url)
+        hostname = parsed_url.hostname
+        if not hostname:
+            return {"status": "error", "details": "Could not parse domain from URL."}
+
+        # Create a temporary file to store the JSON output
+        # We set delete=False so we can read it after the subprocess runs.
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".json") as tmp_file:
+            tmp_file_path = tmp_file.name
+        
+        # Build the command. --quiet suppresses the banner. -oJ writes JSON to our temp file
+        command = [TESTSSL_PATH, "--quiet", "-oJ", tmp_file_path, hostname]
+        
+        raw_output = run_subprocess(command)
+        
+        if raw_output is None:
+             # run_subprocess failed and already printed an error
+             return {"status": "error", "details": "testssl.sh command failed."}
+
+        # Now, read the JSON data from the temporary file
+        try:
+            with open(tmp_file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data
+            
+        except json.JSONDecodeError:
+            print(f"[Error] Failed to decode JSON from testssl.sh output file.", file=sys.stderr)
+            return {"status": "error", "details": "Failed to decode testssl.sh JSON output."}
+        except FileNotFoundError:
+            print(f"[Error] testssl.sh did not create an output file at {tmp_file_path}", file=sys.stderr)
+            return {"status": "error", "details": "testssl.sh did not create an output file."}
+            
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in get_testssl: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
+    finally:
+        # Ensure we always clean up the temporary file
+        if tmp_file_path and os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
 
 def get_nmap(target_url):
     """Runs nmap."""
