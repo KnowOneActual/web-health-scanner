@@ -130,6 +130,7 @@ cd web-health-scanner
 ```
 
 2. **Clone testssl.sh:** 
+```bash
 git clone https://github.com/testssl/testssl.sh.git
 ```
 3. **Install Python requirements:**
