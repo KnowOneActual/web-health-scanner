@@ -27,9 +27,6 @@ def check_dependencies(skip_slow_tools=False):
     missing = []
     
     # 1. Check for nmap
-    # We check this even in fast mode because it's a core dependency 
-    # (though strictly speaking we could skip it if strictly only running fast mode, 
-    # but it's better to ensure the environment is healthy).
     if not shutil.which(NMAP_PATH):
         if not skip_slow_tools:
              missing.append("nmap (not found in PATH)")
@@ -212,7 +209,21 @@ def print_summary(report):
     else:
         print(f"  [!] Scan Failed/Skipped: {ps.get('details', 'Unknown error')}")
 
-    # 2. Security Headers
+    # 2. Tech Stack (New in Summary)
+    print("\n--- Tech Stack ---")
+    tech = report["reports"].get("tech_stack", {})
+    if tech.get("status") == "success":
+        technologies = tech.get("technologies", [])
+        if technologies:
+            print(f"  [+] Identified {len(technologies)} technologies:")
+            for t in technologies:
+                print(f"      - {t}")
+        else:
+            print("  [i] No specific technologies detected.")
+    else:
+        print(f"  [!] Scan Failed: {tech.get('details')}")
+
+    # 3. Security Headers
     print("\n--- Security Headers ---")
     headers = report["reports"].get("security_headers", {})
     if headers.get("status") == "success":
@@ -226,7 +237,7 @@ def print_summary(report):
     else:
         print(f"  [!] Scan Failed: {headers.get('details')}")
 
-    # 3. Broken Links
+    # 4. Broken Links
     print("\n--- Broken Links ---")
     links = report["reports"].get("linkchecker", {})
     if links.get("status") == "success":
@@ -243,7 +254,7 @@ def print_summary(report):
     else:
         print(f"  [!] Scan Failed: {links.get('details')}")
 
-    # 4. Nmap (Ports)
+    # 5. Nmap (Ports)
     print("\n--- Open Ports (Nmap) ---")
     nmap = report["reports"].get("nmap", {})
     if nmap.get("status") == "success":
@@ -258,7 +269,7 @@ def print_summary(report):
     else:
         print(f"  [!] Scan Failed: {nmap.get('details')}")
 
-    # 5. TestSSL
+    # 6. TestSSL
     print("\n--- SSL/TLS Security ---")
     ssl = report["reports"].get("testssl", {})
     if ssl.get("status") == "success":
@@ -280,15 +291,46 @@ def get_tech_stack(target_url):
         wt = webtech.WebTech()
         report = wt.start_from_url(target_url, timeout=5) 
         
-        if not isinstance(report, dict):
+        # Case 1: Library returns a Dictionary (Ideal)
+        if isinstance(report, dict):
+            return {
+                "status": "success",
+                "technologies": report.get('tech_names', [])
+            }
+            
+        # Case 2: Library returns a String (The "Google" bug)
+        # We need to parse the human-readable text manually
+        elif isinstance(report, str):
+            tech_names = []
+            lines = report.split('\n')
+            capture = False
+            for line in lines:
+                clean_line = line.strip()
+                # Start capturing after this header
+                if "Detected technologies:" in clean_line:
+                    capture = True
+                    continue
+                # Stop capturing at the next header
+                if "Detected the following" in clean_line:
+                    capture = False
+                    continue
+                
+                # Capture lines that look like list items
+                if capture and clean_line.startswith('-'):
+                    tech_name = clean_line.lstrip('- ').strip()
+                    if tech_name:
+                        tech_names.append(tech_name)
+            
+            return {
+                "status": "success",
+                "technologies": tech_names
+            }
+
+        # Case 3: Unexpected Type
+        else:
             print(f"[Error] webtech scan returned unexpected data type: {type(report)}", file=sys.stderr)
             return {"status": "error", "details": "Webtech scan did not return a valid report object."}
 
-        tech_names = report.get('tech_names', [])
-        return {
-            "status": "success",
-            "technologies": tech_names
-        }
     except ConnectionException:
         print(f"[Error] Tech stack scan failed: Connection error for {target_url}", file=sys.stderr)
         return {"status": "error", "details": "Connection error."}
