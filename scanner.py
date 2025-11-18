@@ -673,7 +673,9 @@ def get_testssl(target_url, step_info=""):
 
 def get_nmap(target_url, step_info=""):
     """Runs the nmap scan."""
-    print(f"{step_info} [INFO] Running nmap scan on {target_url}... (this also may take several minutes)...")
+    print(
+        f"{step_info} [INFO] Running nmap scan on {target_url}... (this also may take several minutes)..."
+    )
     hostname = urlparse(target_url).hostname
 
     # FIX 3 (Previous): SSRF Mitigation - Validate target hostname/IP before use
