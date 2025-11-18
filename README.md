@@ -1,4 +1,8 @@
-# 🌐 Site-Checkup
+<p align="center">
+<img src="assets/img/web-health-scanner_logo.webp" alt="alt text" width="150">
+</p>
+
+# 🌐 Website-Checkup
 
 [![Python Version](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -11,10 +15,36 @@ The Big Idea: A simple, command-line tool to run a comprehensive health check an
 
 ## About The Project
 
-This tool bundles multiple free APIs and open-source tools to give you a "360-degree" view of a website's health. It's designed to be run as a single command, collecting and organizing reports on performance, security, SEO, and network configuration.
+This tool bundles multiple free APIs and open-source tools to give you a "**360-degree**" view of a website's health. It's designed to be run as a single command, collecting and organizing reports on performance, security, SEO, and network configuration.
 
 The goal is to create a simple, free tool that anyone can use to get a deep-level analysis of their site without needing multiple paid accounts or running many different manual tests.
 
+***
+
+## 💡 Project Philosophy: The Evolution of a Scanner
+
+The development of Site-Checkup is a perfect example of why **technical flexibility** is vital in building good software. The project started small, focusing on simple **web scraping** to gather data. However, that original design proved insufficient for creating a reliable and secure tool.
+
+It became clear that relying on fragile custom scraping and brittle subprocess calls presented three major, unavoidable challenges:
+
+* **Instability:** Scraping logic breaks easily whenever a target website's HTML changes.
+* **Incompleteness:** I couldn't gather deep, validated metrics (like Lighthouse scores) without moving to official **APIs**.
+* **Security Risk:** Heavy reliance on external command-line tools and unchecked user input created high-severity **vulnerabilities**.
+
+To make the project fundamentally better and more reliable, a **strategic pivot** was necessary. I realized that a truly robust tool needed to prioritize stability and security over the initial design. This journey confirmed that I needed to be able to pivot and be flexible from the original design to make something ultimately better.
+
+### Key Learnings & Improvements
+
+This pivot resulted in significant architectural upgrades, leading to the stable **v1.0.2** release:
+
+* **From Scraping to Libraries/APIs:** I replaced fragile custom parsing with calls to stable APIs (Google PageSpeed) and robust Python libraries (`webtech`, `dnspython`, `requests`, `BeautifulSoup`) to gather data.
+* **Best Security Practices:** The code underwent a comprehensive audit to implement defenses against critical vulnerabilities:
+    * **Server-Side Request Forgery (SSRF) Mitigation:** I implemented host resolution validation to block the scanner from being used to attack internal/private networks.
+    * **Path Traversal (PT) Mitigation:** I secured user-supplied file names to prevent arbitrary file writing.
+    * **Insecure XML Parsing:** I adopted the secure `lxml` library to prevent XML External Entity (XXE) and Denial of Service attacks.
+* **Prioritizing Stability:** After the security fixes, I focused on resolving critical runtime bugs, such as XML parsing errors and SSL timeouts on CDN targets, confirming that all components now run reliably.
+
+***
 
 ## Features (Checks Performed)
 
@@ -26,74 +56,22 @@ The goal is to create a simple, free tool that anyone can use to get a deep-leve
 * **SSL/TLS Config:** Runs a deep analysis of the SSL/TLS certificate and server configuration (Skipped in `--fast` mode).
 * **DNS Records:** Dumps all major DNS records (MX, TXT, SPF, etc.).
 
-
 ## Core Toolset
 
 This project is a "meta-tool" that couldn't exist without these amazing free services and open-source projects.
 
+| Tool | Purpose | Type |
+| :--- | :--- | :--- |
+| [Google PageSpeed Insights](https://developers.google.com/speed/docs/insights/v5/get-started) | Performance (Lighthouse) | API |
+| webtech library | General Tech Stack | Python Library |
+| Native Requests/Python | Security Headers & Link Checker | Native Code |
+| [testssl.sh](https://github.com/testssl/testssl.sh) | SSL/TLS Config | Local Tool (Bash) |
+| nmap | Network & Port Scan | Local Tool (System) |
+| dnspython | DNS Records | Python Library |
 
-<table>
-  <tr>
-   <td><strong>Tool</strong>
-   </td>
-   <td><strong>Purpose</strong>
-   </td>
-   <td><strong>Type</strong>
-   </td>
-  </tr>
-  <tr>
-   <td><a href="https://developers.google.com/speed/docs/insights/v5/get-started">Google PageSpeed Insights</a>
-   </td>
-   <td>Performance (Lighthouse)
-   </td>
-   <td>API
-   </td>
-  </tr>
-  <tr>
-   <td>webtech library
-   </td>
-   <td>General Tech Stack
-   </td>
-   <td>Python Library
-   </td>
-  </tr>
-  <tr>
-   <td>Native Requests/Python
-   </td>
-   <td>Security Headers & Link Checker
-   </td>
-   <td>Native Code
-   </td>
-  </tr>
-  <tr>
-   <td><a href="https://github.com/testssl/testssl.sh">testssl.sh</a>
-   </td>
-   <td>SSL/TLS Config
-   </td>
-   <td>Local Tool (Bash)
-   </td>
-  </tr>
-  <tr>
-   <td>nmap
-   </td>
-   <td>Network & Port Scan
-   </td>
-   <td>Local Tool (System)
-   </td>
-  </tr>
-  <tr>
-   <td>dnspython
-   </td>
-   <td>DNS Records
-   </td>
-   <td>Python Library
-   </td>
-  </tr>
-</table>
-
+***
 
 ## 🚀 Getting Started
-
 
 ### Prerequisites
 
@@ -102,34 +80,28 @@ You will need to have Python 3.9+ installed, as well as the following command-li
 * **nmap** (Must be in your system PATH)
 * **git** (to clone this repo and testssl.sh)
 
-
 ### Installation
 
 1.  **Clone this repo:**
-```bash
-git clone https://github.com/KnowOneActual/web-health-scanner.git
-cd web-health-scanner 
-````
+    ```bash
+    git clone https://github.com/KnowOneActual/web-health-scanner.git
+    cd web-health-scanner
+    ```
 
-2.  **Clone testssl.sh:** This must be cloned into the main directory for the scanner to find it. (--depth flag 1 to make the download faster and smaller).
-
-```bash
-git clone --depth 1 https://github.com/drwetter/testssl.sh.git
-```
+2.  **Clone testssl.sh:** This must be cloned into the main directory for the scanner to find it. (--depth 1 flag speeds up and reduces the size of the download).
+    ```bash
+    git clone --depth 1 https://github.com/drwetter/testssl.sh.git
+    ```
 
 3.  **Install Python requirements:**
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-```bash
-pip install -r requirements.txt
-```
+4.  Get a PageSpeed API Key (Optional but Recommended): The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
 
-4.  Get a PageSpeed API Key (Optional but Recommended):
-    The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
-
-
-
-  * Go to the [Google Cloud credentials page](https://console.cloud.google.com/apis/credentials).
-  * Create an API key and ensure the **PageSpeed Insights API** is enabled for your project.
+    * Go to the [Google Cloud credentials page](https://console.cloud.google.com/apis/credentials).
+    * Create an API key and ensure the **PageSpeed Insights API** is enabled for your project.
 
 ## Usage
 
@@ -141,11 +113,10 @@ You can set the key as an environment variable to avoid it being saved in your s
 
 ```bash
 export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
-python scanner.py https://example.com --summary
-```
+python scanner.py [https://example.com](https://example.com) --summary
+````
 
 ### Method 2: Command-Line Flag (Less Secure) **Please exercise caution with your API; in this method, your Key is recorded in the command history.**
-
 
 ```bash
 python scanner.py https://example.com --output report.json --api-key "YOUR_API_KEY_HERE"
@@ -158,6 +129,8 @@ python scanner.py https://example.com --output report.json --api-key "YOUR_API_K
 | `--summary` | Prints a clean, human-readable summary to the terminal after saving the full JSON report. |
 | `--fast` | Skips the two slow scans (`nmap` and `testssl.sh`) for a rapid health check. |
 
+-----
+
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See `LICENSE` for more information
