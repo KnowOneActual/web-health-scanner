@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0] - 2025-11-18
 
 ### Added
+- colorama library
 - Progress Indicator: Added a dynamic step counter (e.g., [3/7]) to the console output to confirm the script is actively running and prevent the appearance of stalling during long scans.
 - Robust, detailed usage examples to the CLI `--help` output.
 

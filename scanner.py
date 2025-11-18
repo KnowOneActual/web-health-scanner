@@ -13,6 +13,10 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 import webtech
 from webtech.utils import ConnectionException
+from colorama import Fore, Style, init # Added for color output
+
+# Initialize colorama for cross-platform support
+init(autoreset=True)
 
 # --- Configuration ---
 # Paths to local tools
@@ -195,7 +199,28 @@ def parse_dns_records(raw_data):
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def print_summary(report):
-    """Prints a human-readable summary of the scan results to the console."""
+    """Prints a human-readable summary of the scan results to the console, with colors."""
+    
+    # Helper for color-coding scores
+    def color_score(score):
+        if score >= 90:
+            return f"{Fore.GREEN}{score}{Fore.RESET}"
+        elif score >= 70:
+            return f"{Fore.YELLOW}{score}{Fore.RESET}"
+        else:
+            return f"{Fore.RED}{score}{Fore.RESET}"
+            
+    # Helper for status messages
+    def color_status(status_text):
+        if status_text.startswith("[+]"):
+            return f"{Fore.GREEN}{status_text}{Fore.RESET}"
+        elif status_text.startswith("[!]"):
+            return f"{Fore.RED}{status_text}{Fore.RESET}"
+        elif status_text.startswith("[i]"):
+            return f"{Fore.YELLOW}{status_text}{Fore.RESET}"
+        return status_text
+
+
     print("\n" + "="*40)
     print(f"   SCAN SUMMARY: {report['scan_target']}")
     print("="*40 + "\n")
@@ -205,26 +230,26 @@ def print_summary(report):
     ps = report["reports"].get("pagespeed", {})
     if ps.get("status") == "success":
         scores = ps.get("scores", {})
-        print(f"  Performance:    {scores.get('performance')}/100")
-        print(f"  Accessibility:  {scores.get('accessibility')}/100")
-        print(f"  Best Practices: {scores.get('best_practices')}/100")
-        print(f"  SEO:            {scores.get('seo')}/100")
+        print(f"  Performance:    {color_score(scores.get('performance'))}/100")
+        print(f"  Accessibility:  {color_score(scores.get('accessibility'))}/100")
+        print(f"  Best Practices: {color_score(scores.get('best_practices'))}/100")
+        print(f"  SEO:            {color_score(scores.get('seo'))}/100")
     else:
-        print(f"  [!] Scan Failed/Skipped: {ps.get('details', 'Unknown error')}")
+        print(color_status(f"  [!] Scan Failed/Skipped: {ps.get('details', 'Unknown error')}"))
 
-    # 2. Tech Stack (New in Summary)
+    # 2. Tech Stack
     print("\n--- Tech Stack ---")
     tech = report["reports"].get("tech_stack", {})
     if tech.get("status") == "success":
         technologies = tech.get("technologies", [])
         if technologies:
-            print(f"  [+] Identified {len(technologies)} technologies:")
+            print(color_status(f"  [+] Identified {len(technologies)} technologies:"))
             for t in technologies:
-                print(f"      - {t}")
+                print(f"      {Fore.CYAN}- {t}{Fore.RESET}")
         else:
-            print("  [i] No specific technologies detected.")
+            print(color_status("  [i] No specific technologies detected."))
     else:
-        print(f"  [!] Scan Failed: {tech.get('details')}")
+        print(color_status(f"  [!] Scan Failed: {tech.get('details')}"))
 
     # 3. Security Headers
     print("\n--- Security Headers ---")
@@ -232,13 +257,13 @@ def print_summary(report):
     if headers.get("status") == "success":
         missing = headers.get("missing_headers", [])
         if not missing:
-            print("  [+] All key headers found!")
+            print(color_status("  [+] All key headers found!"))
         else:
-            print(f"  [!] Missing {len(missing)} headers:")
+            print(color_status(f"  [!] Missing {len(missing)} headers:"))
             for h in missing:
-                print(f"      - {h}")
+                print(f"      {Fore.RED}- {h}{Fore.RESET}")
     else:
-        print(f"  [!] Scan Failed: {headers.get('details')}")
+        print(color_status(f"  [!] Scan Failed: {headers.get('details')}"))
 
     # 4. Broken Links
     print("\n--- Broken Links ---")
@@ -247,15 +272,15 @@ def print_summary(report):
         broken = links.get("broken_links", [])
         count = links.get("summary", {}).get("broken_count", 0)
         if count == 0:
-            print("  [+] No broken links found.")
+            print(color_status("  [+] No broken links found."))
         else:
-            print(f"  [!] Found {count} broken links:")
+            print(color_status(f"  [!] Found {count} broken links:"))
             for link in broken[:3]:
-                 print(f"      - {link['status_code']}: {link['url']}")
+                 print(f"      {Fore.RED}- {link['status_code']}: {link['url']}{Fore.RESET}")
             if count > 3:
                 print(f"      ...and {count - 3} more (see JSON report).")
     else:
-        print(f"  [!] Scan Failed: {links.get('details')}")
+        print(color_status(f"  [!] Scan Failed: {links.get('details')}"))
 
     # 5. Nmap (Ports)
     print("\n--- Open Ports (Nmap) ---")
@@ -263,24 +288,25 @@ def print_summary(report):
     if nmap.get("status") == "success":
         ports = nmap.get("open_ports", [])
         if not ports:
-            print("  [+] No open ports found (in top 100).")
+            print(color_status("  [+] No open ports found (in top 100)."))
         else:
             for p in ports:
-                print(f"  - Port {p['portid']} ({p['service']}): {p['state']}")
+                print(f"  - Port {p['portid']} ({Fore.GREEN}{p['service']}{Fore.RESET}): {p['state']}")
     elif nmap.get("status") == "skipped":
-         print("  [i] Skipped (Fast Mode)")
+         print(color_status("  [i] Skipped (Fast Mode)"))
     else:
-        print(f"  [!] Scan Failed: {nmap.get('details')}")
+        print(color_status(f"  [!] Scan Failed: {nmap.get('details')}"))
 
     # 6. TestSSL
     print("\n--- SSL/TLS Security ---")
     ssl = report["reports"].get("testssl", {})
     if ssl.get("status") == "success":
-        print("  [+] Scan complete. Check JSON report for deep analysis.")
+        # Note: We don't parse the detailed findings here, just confirm success
+        print(color_status("  [+] Scan complete. Check JSON report for deep analysis."))
     elif ssl.get("status") == "skipped":
-        print("  [i] Skipped (Fast Mode)")
+        print(color_status("  [i] Skipped (Fast Mode)"))
     else:
-        print(f"  [!] Scan Failed/Skipped: {ssl.get('details')}")
+        print(color_status(f"  [!] Scan Failed/Skipped: {ssl.get('details')}"))
 
     print("\n" + "="*40 + "\n")
 
@@ -567,6 +593,7 @@ def get_dns_records(target_url, step_info=""):
 # --- Main Execution ---
 
 def main():
+    # Use RawTextHelpFormatter to preserve line breaks and spacing in epilog
     parser = argparse.ArgumentParser(
         description="Run a full website health check and audit.",
         formatter_class=argparse.RawTextHelpFormatter,

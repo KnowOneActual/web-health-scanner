@@ -10,3 +10,5 @@ webtech
 beautifulsoup4
 # For fast HTML parsing
 lxml
+#For cross-platform terminal coloring in the summary
+colorama
