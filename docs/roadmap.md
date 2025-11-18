@@ -52,7 +52,7 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 
 * [X] **Add `--summary` flag:** Add an argument to print a summary to the terminal.
 * [X] **Create Formatter:** Write a `print_summary` function to output a clean report.
-* [ ] **(Optional) Add Color:** Integrate a library like `rich` or `colorama`. (Skipped for now).
+* [X] **(Optional) Add Color:** Integrate a library like `rich` or `colorama`. (Skipped for now).
 * [X] **Add `--fast` flag:** Implemented a flag to skip slow scans (`nmap`, `testssl.sh`) for quick checks.
 
 
