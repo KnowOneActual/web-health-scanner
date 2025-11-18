@@ -285,11 +285,11 @@ def print_summary(report):
     print("\n" + "="*40 + "\n")
 
 
-# --- Scan Functions ---
+# --- Scan Functions (with step_info argument added) ---
 
-def get_tech_stack(target_url):
+def get_tech_stack(target_url, step_info=""):
     """Runs the webtech scan to identify site technologies."""
-    print(f"[INFO] Running tech stack scan on {target_url}...")
+    print(f"{step_info} [INFO] Running tech stack scan on {target_url}...")
     try:
         wt = webtech.WebTech()
         report = wt.start_from_url(target_url, timeout=5) 
@@ -340,9 +340,9 @@ def get_tech_stack(target_url):
         print(f"[Error] An unexpected error occurred in get_tech_stack: {e}", file=sys.stderr)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
-def get_pagespeed(target_url, api_key):
+def get_pagespeed(target_url, api_key, step_info=""):
     """Runs the Google PageSpeed Insights scan."""
-    print(f"[INFO] Running PageSpeed scan on {target_url}...")
+    print(f"{step_info} [INFO] Running PageSpeed scan on {target_url}...")
     
     if not api_key:
         print("       [INFO] No PageSpeed API key provided. Skipping scan.")
@@ -367,30 +367,26 @@ def get_pagespeed(target_url, api_key):
         return data
         
     except requests.exceptions.HTTPError as e:
-        # Handle specific HTTP errors (like 400 Bad Request, 429 Rate Limit, 500 Server Error)
         error_msg = f"HTTP Error {e.response.status_code}: {e.response.reason}"
         try:
-            # Try to get the detailed error message from the JSON body
             error_data = e.response.json()
             error_msg = error_data.get("error", {}).get("message", error_msg)
         except json.JSONDecodeError:
-            pass # Use the default HTTP error message if response isn't JSON
+            pass
         print(f"[Error] PageSpeed API failed: {error_msg}", file=sys.stderr)
         return {"status": "error", "details": f"API Error: {error_msg}"}
 
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-        # Handle connection, timeout, or general request errors
         print(f"[Error] Could not connect to PageSpeed API: {e}", file=sys.stderr)
         return {"status": "error", "details": f"API request failed: {str(e)}"}
     
     except json.JSONDecodeError:
-        # Should be caught by HTTPError above, but good as a fallback
         print("[Error] Failed to decode JSON response from PageSpeed API.", file=sys.stderr)
         return {"status": "error", "details": "Invalid JSON response from API."}
 
-def analyze_security_headers(target_url):
+def analyze_security_headers(target_url, step_info=""):
     """Fetches headers using 'requests' and checks for key security headers."""
-    print(f"[INFO] Running native security headers scan on {target_url}...")
+    print(f"{step_info} [INFO] Running native security headers scan on {target_url}...")
     
     HEADERS_TO_CHECK = [
         'Content-Security-Policy',
@@ -405,10 +401,8 @@ def analyze_security_headers(target_url):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
         }
-        # Use a GET request, as some servers don't respond to HEAD
-        # Follow redirects to get the headers from the *final* destination
         response = requests.get(target_url, headers=headers, timeout=10, allow_redirects=True)
-        response.raise_for_status() # Check for bad status codes 
+        response.raise_for_status() 
         
         response_headers = response.headers
 
@@ -416,7 +410,6 @@ def analyze_security_headers(target_url):
         found_headers = []
 
         for header in HEADERS_TO_CHECK:
-            # Check headers case-insensitively
             if header in response_headers:
                 found_headers.append(header)
             else:
@@ -430,16 +423,15 @@ def analyze_security_headers(target_url):
         }
 
     except requests.exceptions.RequestException as e:
-        # This catches all requests errors: ConnectionError, Timeout, HTTPError, etc.
         print(f"[Error] Failed to fetch headers for scan: {e}", file=sys.stderr)
         return {"status": "error", "details": f"Failed to fetch {target_url}: {str(e)}"}
     except Exception as e:
         print(f"[Error] An unexpected error occurred in analyze_security_headers: {e}", file=sys.stderr)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
-def get_testssl(target_url):
+def get_testssl(target_url, step_info=""):
     """Runs the testssl.sh scan."""
-    print(f"[INFO] Running testssl.sh scan on {target_url}... (this may take several minutes)...")
+    print(f"{step_info} [INFO] Running testssl.sh scan on {target_url}... (this may take several minutes)...")
     hostname = urlparse(target_url).hostname
     
     try:
@@ -470,9 +462,9 @@ def get_testssl(target_url):
             os.remove(json_output_file)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
-def get_nmap(target_url):
+def get_nmap(target_url, step_info=""):
     """Runs the nmap scan."""
-    print(f"[INFO] Running nmap scan on {target_url}...")
+    print(f"{step_info} [INFO] Running nmap scan on {target_url}...")
     hostname = urlparse(target_url).hostname
     command = [NMAP_PATH, "-F", "-sV", "-oX", "-", hostname]
     
@@ -485,9 +477,9 @@ def get_nmap(target_url):
         print(f"[Error] An unexpected error occurred in get_nmap: {e}", file=sys.stderr)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
-def get_linkchecker(target_url):
+def get_linkchecker(target_url, step_info=""):
     """Runs a simple link check on the target URL's homepage."""
-    print(f"[INFO] Running link scan on {target_url}...")
+    print(f"{step_info} [INFO] Running link scan on {target_url}...")
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
@@ -516,19 +508,16 @@ def get_linkchecker(target_url):
                 link_info["status_code"] = link_response.status_code
                 link_response.raise_for_status() # Check for bad status codes
                 
-                # Only check for broken if status check didn't fail
                 if link_response.status_code >= 400:
                     link_info["status"] = "broken"
                     broken_links.append(link_info)
                 else:
                     link_info["status"] = "valid"
             except requests.exceptions.HTTPError as he:
-                # Catches 4xx, 5xx errors
                 link_info["status"] = "broken"
                 link_info["status_code"] = he.response.status_code
                 broken_links.append(link_info)
             except requests.exceptions.RequestException:
-                # Catches ConnectionError, Timeout, etc.
                 link_info["status"] = "unreachable"
                 broken_links.append(link_info)
             
@@ -551,9 +540,9 @@ def get_linkchecker(target_url):
         print(f"[Error] An unexpected error occurred in get_linkchecker: {e}", file=sys.stderr)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
-def get_dns_records(target_url):
+def get_dns_records(target_url, step_info=""):
     """Runs the dnspython scan."""
-    print(f"[INFO] Running DNS scan on {target_url}...")
+    print(f"{step_info} [INFO] Running DNS scan on {target_url}...")
     hostname = urlparse(target_url).hostname
     record_types = ['A', 'AAAA', 'MX', 'TXT', 'NS', 'SOA', 'CNAME']
     results = {}
@@ -578,7 +567,6 @@ def get_dns_records(target_url):
 # --- Main Execution ---
 
 def main():
-    # Use RawTextHelpFormatter to preserve line breaks and spacing in epilog
     parser = argparse.ArgumentParser(
         description="Run a full website health check and audit.",
         formatter_class=argparse.RawTextHelpFormatter,
@@ -607,6 +595,14 @@ EXAMPLES:
     parser.add_argument("--fast", action="store_true", help="Skip slow scans (nmap and testssl.sh) for a quick check.")
 
     args = parser.parse_args()
+
+    # Determine total steps for the progress counter
+    if args.fast:
+        TOTAL_STEPS = 5 # Tech Stack, PageSpeed, Headers, Link Checker, DNS
+    else:
+        TOTAL_STEPS = 7 # All 7 scans
+        
+    step_counter = 1
 
     # v1.0 Polish: Check dependencies immediately after parsing arguments
     check_dependencies(skip_slow_tools=args.fast)
@@ -639,26 +635,51 @@ EXAMPLES:
         }
     }
 
-    # Run scans...
-    master_report["reports"]["tech_stack"] = get_tech_stack(args.url)
-    raw_pagespeed = get_pagespeed(args.url, args.api_key)
-    master_report["reports"]["pagespeed"] = parse_pagespeed(raw_pagespeed)
-    master_report["reports"]["security_headers"] = analyze_security_headers(args.url)
+    # Helper function to get the current step prefix
+    def get_step_info():
+        nonlocal step_counter
+        return f"[{step_counter}/{TOTAL_STEPS}]"
+
+
+    # Run scans in sequence, updating the counter
+
+    # 1. Tech Stack
+    master_report["reports"]["tech_stack"] = get_tech_stack(args.url, step_info=get_step_info())
+    step_counter += 1
     
+    # 2. PageSpeed
+    raw_pagespeed = get_pagespeed(args.url, args.api_key, step_info=get_step_info())
+    master_report["reports"]["pagespeed"] = parse_pagespeed(raw_pagespeed)
+    step_counter += 1
+    
+    # 3. Security Headers
+    master_report["reports"]["security_headers"] = analyze_security_headers(args.url, step_info=get_step_info())
+    step_counter += 1
+    
+    # 4. TestSSL (Skipped if --fast)
     if not args.fast:
-        master_report["reports"]["testssl"] = get_testssl(args.url)
-        
-        raw_nmap = get_nmap(args.url)
-        master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
+        master_report["reports"]["testssl"] = get_testssl(args.url, step_info=get_step_info())
+        step_counter += 1
     else:
         master_report["reports"]["testssl"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
+    
+    # 5. Nmap (Skipped if --fast)
+    if not args.fast:
+        raw_nmap = get_nmap(args.url, step_info=get_step_info())
+        master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
+        step_counter += 1
+    else:
         master_report["reports"]["nmap"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
 
-    raw_linkcheck = get_linkchecker(args.url)
+    # 6. Link Checker
+    raw_linkcheck = get_linkchecker(args.url, step_info=get_step_info())
     master_report["reports"]["linkchecker"] = parse_linkchecker(raw_linkcheck)
-
-    raw_dns = get_dns_records(args.url)
+    step_counter += 1
+    
+    # 7. DNS Records
+    raw_dns = get_dns_records(args.url, step_info=get_step_info())
     master_report["reports"]["dns"] = parse_dns_records(raw_dns)
+    step_counter += 1
 
     # Set the timestamp just before writing
     timestamp = datetime.now()
@@ -666,9 +687,7 @@ EXAMPLES:
     
     # --- File Naming Logic ---
     if args.output == DEFAULT_OUTPUT_FILENAME:
-        # Format the time for a clean filename
         time_str = timestamp.strftime("%Y%m%d_%H%M%S")
-        # Sanitize hostname to replace illegal chars and dots with hyphens
         safe_hostname = target_hostname.replace('.', '-')
         args.output = f"site-scan-{safe_hostname}-{time_str}.json"
         
