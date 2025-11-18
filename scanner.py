@@ -181,7 +181,9 @@ def parse_nmap_xml(xml_output):
                     "portid": port.get("portid"),
                     "protocol": port.get("protocol"),
                     "state": "open",
-                    "service": service.get("name") if service is not None else "unknown",
+                    "service": (
+                        service.get("name") if service is not None else "unknown"
+                    ),
                     "product": service.get("product") if service is not None else "",
                     "version": service.get("version") if service is not None else "",
                 }
@@ -196,7 +198,10 @@ def parse_nmap_xml(xml_output):
         print(f"[Error] Failed to parse Nmap XML: {e}", file=sys.stderr)
         return {"status": "error", "details": f"Nmap XML ParseError: {str(e)}"}
     except Exception as e:
-        print(f"[Error] An unexpected error occurred in parse_nmap_xml: {e}", file=sys.stderr)
+        print(
+            f"[Error] An unexpected error occurred in parse_nmap_xml: {e}",
+            file=sys.stderr,
+        )
         return {"status": "error", "details": f"XML parsing error: {str(e)}"}
 
 
@@ -242,7 +247,10 @@ def parse_pagespeed(raw_data):
         if "status" in raw_data and raw_data["status"] == "error":
             return raw_data
         print(f"[Error] Failed to parse PageSpeed JSON: {e}", file=sys.stderr)
-        return {"status": "error", "details": f"Failed to parse PageSpeed JSON: {str(e)}"}
+        return {
+            "status": "error",
+            "details": f"Failed to parse PageSpeed JSON: {str(e)}",
+        }
 
 
 def parse_linkchecker(raw_data):
@@ -260,7 +268,10 @@ def parse_linkchecker(raw_data):
             "broken_links": broken_links,
         }
     except Exception as e:
-        print(f"[Error] An unexpected error occurred in parse_linkchecker: {e}", file=sys.stderr)
+        print(
+            f"[Error] An unexpected error occurred in parse_linkchecker: {e}",
+            file=sys.stderr,
+        )
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 
@@ -282,7 +293,10 @@ def parse_dns_records(raw_data):
 
         return {"status": "success", "records": cleaned_records}
     except Exception as e:
-        print(f"[Error] An unexpected error occurred in parse_dns_records: {e}", file=sys.stderr)
+        print(
+            f"[Error] An unexpected error occurred in parse_dns_records: {e}",
+            file=sys.stderr,
+        )
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 
@@ -367,7 +381,9 @@ def print_summary(report):
         else:
             print(color_status(f"  [!] Found {count} broken links:"))
             for link in broken[:3]:
-                print(f"      {Fore.RED}- {link['status_code']}: {link['url']}{Fore.RESET}")
+                print(
+                    f"      {Fore.RED}- {link['status_code']}: {link['url']}{Fore.RESET}"
+                )
             if count > 3:
                 print(f"      ...and {count - 3} more (see JSON report).")
     else:
@@ -395,19 +411,11 @@ def print_summary(report):
     ssl = report["reports"].get("testssl", {})
     if ssl.get("status") == "success":
         # Note: We don't parse the detailed findings here, just confirm success
-        print(
-            color_status(
-                "  [+] Scan complete. Check JSON report for deep analysis."
-            )
-        )
+        print(color_status("  [+] Scan complete. Check JSON report for deep analysis."))
     elif ssl.get("status") == "skipped":
         print(color_status("  [i] Skipped (Fast Mode)"))
     else:
-        print(
-            color_status(
-                f"  [!] Scan Failed/Skipped: {ssl.get('details')}"
-            )
-        )
+        print(color_status(f"  [!] Scan Failed/Skipped: {ssl.get('details')}"))
 
     print("\n" + "=" * 40 + "\n")
 
@@ -665,7 +673,7 @@ def get_testssl(target_url, step_info=""):
 
 def get_nmap(target_url, step_info=""):
     """Runs the nmap scan."""
-    print(f"{step_info} [INFO] Running nmap scan on {target_url}...")
+    print(f"{step_info} [INFO] Running nmap scan on {target_url}... (this also may take several minutes)...")
     hostname = urlparse(target_url).hostname
 
     # FIX 3 (Previous): SSRF Mitigation - Validate target hostname/IP before use
@@ -780,7 +788,10 @@ def get_linkchecker(target_url, step_info=""):
                 f"[Error] An unexpected error occurred in get_linkchecker: {e}",
                 file=sys.stderr,
             )
-            return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
+            return {
+                "status": "error",
+                "details": f"An unexpected error occurred: {str(e)}",
+            }
 
     else:  # Validation failed
         print(f"[Error] {validation['details']}", file=sys.stderr)
@@ -1000,7 +1011,10 @@ EXAMPLES:
 
     except IOError as e:
         print(f"\n--- Scan Complete ---", file=sys.stderr)
-        print(f"[Error] Failed to write report file: {e}", file=sys.stderr)
+        print(
+            f"[Error] Failed to write report file: {e}",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":
