@@ -17,8 +17,7 @@ from bs4 import BeautifulSoup
 TESTSSL_PATH = "./testssl.sh/testssl.sh"
 # Assumes nmap is in the system's PATH
 NMAP_PATH = "nmap"
-# Assumes secheaders is installed via pip and in the system's PATH
-SECHEADERS_PATH = "secheaders"
+# NOTE: SECHEADERS_PATH has been removed as we no longer use the tool
 
 
 # --- Helper Functions ---
@@ -127,34 +126,50 @@ def parse_pagespeed(raw_data):
         print(f"[Error] Failed to parse PageSpeed JSON: {e}", file=sys.stderr)
         return {"status": "error", "details": f"Failed to parse PageSpeed JSON: {str(e)}"}
 
-def parse_secheaders(raw_data):
-    """Parses the raw secheaders JSON to extract missing headers."""
+def parse_linkchecker(raw_data):
+    """Parses the raw linkchecker output to extract a summary."""
     try:
-        # Pass through errors
-        if 'status' in raw_data and raw_data['status'] != 'success':
+        # Pass through errors or non-success statuses
+        if 'status' not in raw_data or raw_data['status'] != 'success':
             return raw_data
         
-        # The actual list of headers is in the 'data' key
-        header_list = raw_data.get('data', [])
-        if not header_list:
-            return {"status": "error", "details": "No header data found in secheaders output."}
-
-        missing_headers = []
-        # Fix: Iterate over header_list, not raw_data
-        for header_info in header_list:
-            # A header is considered "missing" if it's not defined or if it's defined but has a warning
-            if not header_info.get("defined") or header_info.get("warn"):
-                missing_headers.append(header_info.get("name", "Unknown"))
+        # Extract the key parts as defined in the roadmap
+        summary = raw_data.get("summary", {})
+        broken_links = raw_data.get("broken_links", [])
         
         return {
             "status": "success",
-            "missing_or_warn": missing_headers,
-            "raw_count": len(header_list)
+            "summary": summary,
+            "broken_links": broken_links
         }
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in parse_linkchecker: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
-    except (KeyError, TypeError, AttributeError) as e:
-        print(f"[Error] Failed to parse secheaders JSON: {e}", file=sys.stderr)
-        return {"status": "error", "details": f"Failed to parse secheaders JSON: {str(e)}"}
+def parse_dns_records(raw_data):
+    """Parses the raw DNS records to remove empty entries."""
+    try:
+        if 'status' not in raw_data or raw_data['status'] != 'success':
+            return raw_data
+        
+        raw_records = raw_data.get("data", {})
+        cleaned_records = {}
+        
+        if not raw_records:
+             return {"status": "error", "details": "No DNS data found to parse."}
+
+        for record_type, records in raw_records.items():
+            # Only add the record type to the report if it has entries
+            if records:
+                cleaned_records[record_type] = records
+        
+        return {
+            "status": "success",
+            "records": cleaned_records
+        }
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in parse_dns_records: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 # --- Scan Functions ---
 
@@ -194,6 +209,7 @@ def get_pagespeed(target_url, api_key):
         return {"status": "skipped", "details": "No API key provided."}
 
     # The Google PageSpeed API endpoint
+    # *** THIS IS THE FIX ***
     api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
     
     # Parameters for the API
@@ -227,32 +243,54 @@ def get_pagespeed(target_url, api_key):
         print(f"[Error] Could not connect to PageSpeed API: {e}", file=sys.stderr)
         return {"status": "error", "details": f"API request failed: {str(e)}"}
 
-def get_secheaders(target_url):
-    """Runs the secheaders scan."""
-    print(f"[INFO] Running security headers scan on {target_url}...")
-    command = [SECHEADERS_PATH, "--json", target_url]
+def analyze_security_headers(target_url):
+    """Fetches headers using 'requests' and checks for key security headers."""
+    print(f"[INFO] Running native security headers scan on {target_url}...")
     
+    # List of key headers to check.
+    # We check for their *presence*, not their content (for now).
+    HEADERS_TO_CHECK = [
+        'Content-Security-Policy',
+        'Strict-Transport-Security',
+        'X-Content-Type-Options',
+        'X-Frame-Options',
+        'Referrer-Policy',
+        'Permissions-Policy'
+    ]
+
     try:
-        raw_output = run_subprocess(command, timeout=30)
-        if raw_output:
-            data = json.loads(raw_output)
-            
-            # V2 Fix: Check if 'data' is a string that needs to be loaded again.
-            if isinstance(data, str):
-                try:
-                    data = json.loads(data)
-                except json.JSONDecodeError:
-                    print("[Error] Failed to double-parse secheaders JSON string.", file=sys.stderr)
-                    return {"status": "error", "details": "Failed to parse nested JSON string."}
-            
-            # Add a 'status' key for our parser
-            return {"status": "success", "data": data}
-        return {"status": "error", "details": "secheaders command failed or returned no output."}
-    except json.JSONDecodeError:
-        print("[Error] Failed to parse secheaders JSON output.", file=sys.stderr)
-        return {"status": "error", "details": "Failed to parse secheaders JSON."}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+        }
+        # Use a GET request, as some servers don't respond to HEAD
+        # Follow redirects to get the headers from the *final* destination
+        response = requests.get(target_url, headers=headers, timeout=10, allow_redirects=True)
+        
+        # We need to check headers case-insensitively.
+        # The 'requests' headers object already does this.
+        response_headers = response.headers
+
+        missing_headers = []
+        found_headers = []
+
+        for header in HEADERS_TO_CHECK:
+            if header in response_headers:
+                found_headers.append(header)
+            else:
+                missing_headers.append(header)
+                
+        return {
+            "status": "success",
+            "found_headers": found_headers,
+            "missing_headers": missing_headers,
+            "total_checked": len(HEADERS_TO_CHECK)
+        }
+
+    except requests.exceptions.RequestException as e:
+        print(f"[Error] Failed to fetch headers for scan: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"Failed to fetch {target_url}: {str(e)}"}
     except Exception as e:
-        print(f"[Error] An unexpected error occurred in get_secheaders: {e}", file=sys.stderr)
+        print(f"[Error] An unexpected error occurred in analyze_security_headers: {e}", file=sys.stderr)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def get_testssl(target_url):
@@ -407,6 +445,7 @@ def main():
     # Add 'https://' if no scheme is provided
     if not args.url.startswith(('http://', 'https://')):
         print(f"[INFO] No scheme provided, defaulting to https://")
+        # *** THIS IS THE FIX ***
         args.url = f"https://{args.url}"
     
     # Strip trailing junk
@@ -436,9 +475,8 @@ def main():
     raw_pagespeed = get_pagespeed(args.url, args.api_key)
     master_report["reports"]["pagespeed"] = parse_pagespeed(raw_pagespeed)
     
-    # Run secheaders and parse it
-    raw_secheaders = get_secheaders(args.url)
-    master_report["reports"]["security_headers"] = parse_secheaders(raw_secheaders)
+    # Run native security headers scan
+    master_report["reports"]["security_headers"] = analyze_security_headers(args.url)
     
     # --- testssl.sh scan ---
     # This scan is very slow, so we skip it by default.
@@ -451,9 +489,13 @@ def main():
     raw_nmap = get_nmap(args.url)
     master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
 
-    # V2 Fix: Corrected args.l to args.url
-    master_report["reports"]["linkchecker"] = get_linkchecker(args.url)
-    master_report["reports"]["dns"] = get_dns_records(args.url)
+    # Run linkchecker and parse it
+    raw_linkcheck = get_linkchecker(args.url)
+    master_report["reports"]["linkchecker"] = parse_linkchecker(raw_linkcheck)
+
+    # Run DNS and parse it
+    raw_dns = get_dns_records(args.url)
+    master_report["reports"]["dns"] = parse_dns_records(raw_dns)
 
     # Set the timestamp
     master_report["scan_timestamp"] = datetime.now().isoformat()

@@ -5,8 +5,6 @@ requests
 dnspython
 #For finding broken links
 LinkChecker
-#For checking security headers (local tool)
-secheaders
 #For parsing HTML to find links
 beautifulsoup4
 #For fast HTML parsing
