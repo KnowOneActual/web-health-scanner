@@ -157,11 +157,8 @@ fzf
 history.txt
 GEMINI.md
 
-Generated output
-
+#Generated output
 *.json
 report.json
-
-Cloned dependencies
-
+#Cloned dependencies
 testssl.sh/
