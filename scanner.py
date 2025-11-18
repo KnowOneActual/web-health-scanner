@@ -8,8 +8,8 @@ import requests
 import dns.resolver
 import tempfile
 from urllib.parse import urlparse, urljoin
-import lxml.etree as ET  
-import socket  
+import lxml.etree as ET
+import socket
 import ipaddress
 from datetime import datetime
 from bs4 import BeautifulSoup
