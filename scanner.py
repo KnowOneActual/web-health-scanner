@@ -45,12 +45,17 @@ def run_subprocess(command, timeout=60):
 def parse_nmap_xml(xml_output):
     """Parses the raw Nmap XML to extract open ports and services."""
     try:
+        # Pass through errors (e.g., if nmap failed)
+        if isinstance(xml_output, dict) and 'status' in xml_output:
+            return xml_output
+
         root = ET.fromstring(xml_output)
         host = root.find('host')
         if host is None:
             return {"status": "error", "details": "No host information found in nmap output."}
 
-        host_status = host.find('status').get('state')
+        host_status_elem = host.find('status')
+        host_status = host_status_elem.get('state') if host_status_elem is not None else "unknown"
         open_ports = []
         
         for port in host.findall('ports/port'):
@@ -230,8 +235,17 @@ def get_secheaders(target_url):
     try:
         raw_output = run_subprocess(command, timeout=30)
         if raw_output:
-            # Add a 'status' key for our parser
             data = json.loads(raw_output)
+            
+            # V2 Fix: Check if 'data' is a string that needs to be loaded again.
+            if isinstance(data, str):
+                try:
+                    data = json.loads(data)
+                except json.JSONDecodeError:
+                    print("[Error] Failed to double-parse secheaders JSON string.", file=sys.stderr)
+                    return {"status": "error", "details": "Failed to parse nested JSON string."}
+            
+            # Add a 'status' key for our parser
             return {"status": "success", "data": data}
         return {"status": "error", "details": "secheaders command failed or returned no output."}
     except json.JSONDecodeError:
@@ -286,7 +300,8 @@ def get_nmap(target_url):
     try:
         raw_output = run_subprocess(command, timeout=120)
         if raw_output:
-            return parse_nmap_xml(raw_output) # Parse the XML
+            # We no longer parse here, just return the raw XML
+            return {"status": "success", "xml_data": raw_output}
         return {"status": "error", "details": "nmap command failed or returned no output."}
     except Exception as e:
         print(f"[Error] An unexpected error occurred in get_nmap: {e}", file=sys.stderr)
@@ -432,7 +447,11 @@ def main():
     master_report["reports"]["testssl"] = {"status": "skipped", "details": "Scan skipped by default in script."}
     # master_report["reports"]["testssl"] = get_testssl(args.url)
     
-    master_report["reports"]["nmap"] = get_nmap(args.url)
+    # Run nmap and parse it
+    raw_nmap = get_nmap(args.url)
+    master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
+
+    # V2 Fix: Corrected args.l to args.url
     master_report["reports"]["linkchecker"] = get_linkchecker(args.url)
     master_report["reports"]["dns"] = get_dns_records(args.url)
 
