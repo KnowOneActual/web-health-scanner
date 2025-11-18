@@ -6,8 +6,6 @@
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/YOUR_USERNAME/YOUR_REPONAME/actions)
 
 
-# **Under Development**
-
 The Big Idea: A simple, command-line tool to run a comprehensive health check and audit on any website.
 
 
