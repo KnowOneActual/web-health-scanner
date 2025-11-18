@@ -56,22 +56,17 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 
 **Goal:** Make the tool useful for a quick glance, not just for data nerds.
 
-
-
 * [X] **Add `--summary` flag:** Add an argument to print a summary to the terminal.
-* [X] **Create Formatter:** Write a `print_summary` function to output a clean report (e.g., "Performance Score: 86/100", "Missing Headers: 3", "Broken Links: 0").
+* [X] **Create Formatter:** Write a `print_summary` function to output a clean report.
 * [ ] **(Optional) Add Color:** Integrate a library like `rich` or `colorama`. (Skipped for now).
 * [X] **Add `--fast` flag:** Implemented a flag to skip slow scans (`nmap`, `testssl.sh`) for quick checks.
 
 
-### v1.0: Polish & Release (Next Steps)
+### v1.0: Polish & Release (In Progress)
 
 **Goal:** Make the tool robust and ready for public use.
 
-
-
-* [ ] **Dependency Checks:** Add code to gracefully check if `nmap`, `testssl.sh`, etc., are available on the user's system and provide helpful error messages if not.
-* [ ] **Error Handling:** Add robust `try...except` blocks for all API calls and subprocesses (partially complete).
+* [X] **Dependency Checks:** Add code to gracefully check if `nmap`, `testssl.sh`, etc., are available on the user's system.
+* [ ] **Error Handling:** Add robust `try...except` blocks for all API calls and subprocesses.
 * [ ] **Documentation:** Finalize the `README.md` with complete installation and usage instructions.
-* [ ] **License:** Add an `MIT LICENSE.txt` file. (File is `LICENSE`, just need to update this item).
-* [ ] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run `black` code formatter).
+* [ ] **License:** Add an `MIT LICENSE.txt` file.

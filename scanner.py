@@ -3,6 +3,7 @@ import json
 import os
 import subprocess
 import sys
+import shutil  # Added for dependency checking
 import requests
 import dns.resolver
 import tempfile 
@@ -15,13 +16,43 @@ from webtech.utils import ConnectionException
 
 # --- Configuration ---
 # Paths to local tools
-# Assumes testssl.sh was cloned into the project directory
 TESTSSL_PATH = "./testssl.sh/testssl.sh"
-# Assumes nmap is in the system's PATH
 NMAP_PATH = "nmap"
 
 
 # --- Helper Functions ---
+
+def check_dependencies(skip_slow_tools=False):
+    """Checks if external tools (nmap, testssl.sh) are installed/available."""
+    missing = []
+    
+    # 1. Check for nmap
+    # We check this even in fast mode because it's a core dependency 
+    # (though strictly speaking we could skip it if strictly only running fast mode, 
+    # but it's better to ensure the environment is healthy).
+    if not shutil.which(NMAP_PATH):
+        if not skip_slow_tools:
+             missing.append("nmap (not found in PATH)")
+
+    # 2. Check for testssl.sh
+    if not skip_slow_tools:
+        if not os.path.exists(TESTSSL_PATH):
+            missing.append(f"testssl.sh (not found at {TESTSSL_PATH})")
+        else:
+            # Check if executable, if not, try to fix it
+            if not os.access(TESTSSL_PATH, os.X_OK):
+                try:
+                    print(f"[INFO] Making {TESTSSL_PATH} executable...")
+                    os.chmod(TESTSSL_PATH, 0o755)
+                except OSError:
+                    missing.append(f"testssl.sh found but not executable (try 'chmod +x {TESTSSL_PATH}')")
+
+    if missing:
+        print("\n[!] CRITICAL: Missing Dependencies", file=sys.stderr)
+        for m in missing:
+            print(f"    - {m}", file=sys.stderr)
+        print("\nPlease install them or fix paths before running.", file=sys.stderr)
+        sys.exit(1)
 
 def run_subprocess(command, timeout=60):
     """Helper to run a subprocess, capture output, and handle errors."""
@@ -45,7 +76,6 @@ def run_subprocess(command, timeout=60):
 def parse_nmap_xml(xml_output):
     """Parses the raw Nmap XML to extract open ports and services."""
     try:
-        # Pass through errors (e.g., if nmap failed or was skipped)
         if isinstance(xml_output, dict) and 'status' in xml_output:
             return xml_output
 
@@ -86,11 +116,9 @@ def parse_nmap_xml(xml_output):
 def parse_pagespeed(raw_data):
     """Parses the raw PageSpeed JSON to extract key scores."""
     try:
-        # If the scan failed, it will have our custom 'status' key.
         if 'status' in raw_data and raw_data['status'] != 'success':
             return raw_data
 
-        # Handle API errors that don't have our 'status' key
         if 'lighthouseResult' not in raw_data:
             if 'error' in raw_data:
                 error_msg = raw_data.get("error", {}).get("message", "Unknown API Error")
@@ -100,10 +128,8 @@ def parse_pagespeed(raw_data):
 
         categories = raw_data['lighthouseResult']['categories']
         
-        # Helper to safely get score, defaulting to 0 if 'score' is None
         def get_score(category_name):
             score = categories.get(category_name, {}).get('score')
-            # Check if score is None before multiplying
             return int(score * 100) if score is not None else 0
 
         performance = get_score('performance')
@@ -121,7 +147,6 @@ def parse_pagespeed(raw_data):
             }
         }
     except (KeyError, TypeError, AttributeError) as e:
-        # Check if it was an API error we already caught
         if 'status' in raw_data and raw_data['status'] == 'error':
             return raw_data
         print(f"[Error] Failed to parse PageSpeed JSON: {e}", file=sys.stderr)
@@ -130,11 +155,9 @@ def parse_pagespeed(raw_data):
 def parse_linkchecker(raw_data):
     """Parses the raw linkchecker output to extract a summary."""
     try:
-        # Pass through errors or non-success statuses
         if 'status' not in raw_data or raw_data['status'] != 'success':
             return raw_data
         
-        # Extract the key parts as defined in the roadmap
         summary = raw_data.get("summary", {})
         broken_links = raw_data.get("broken_links", [])
         
@@ -160,7 +183,6 @@ def parse_dns_records(raw_data):
              return {"status": "error", "details": "No DNS data found to parse."}
 
         for record_type, records in raw_records.items():
-            # Only add the record type to the report if it has entries
             if records:
                 cleaned_records[record_type] = records
         
@@ -214,7 +236,6 @@ def print_summary(report):
             print("  [+] No broken links found.")
         else:
             print(f"  [!] Found {count} broken links:")
-            # Print first 3 only to keep summary clean
             for link in broken[:3]:
                  print(f"      - {link['status_code']}: {link['url']}")
             if count > 3:
@@ -241,7 +262,6 @@ def print_summary(report):
     print("\n--- SSL/TLS Security ---")
     ssl = report["reports"].get("testssl", {})
     if ssl.get("status") == "success":
-        # TestSSL output is huge, so just generic success message for now
         print("  [+] Scan complete. Check JSON report for deep analysis.")
     elif ssl.get("status") == "skipped":
         print("  [i] Skipped (Fast Mode)")
@@ -258,17 +278,13 @@ def get_tech_stack(target_url):
     print(f"[INFO] Running tech stack scan on {target_url}...")
     try:
         wt = webtech.WebTech()
-        # Run the scan. This returns a dict with 'tech_names' and 'headers'
         report = wt.start_from_url(target_url, timeout=5) 
         
-        # Check if the report is a dictionary
         if not isinstance(report, dict):
             print(f"[Error] webtech scan returned unexpected data type: {type(report)}", file=sys.stderr)
             return {"status": "error", "details": "Webtech scan did not return a valid report object."}
 
-        # We only really care about the 'tech_names' list
         tech_names = report.get('tech_names', [])
-        
         return {
             "status": "success",
             "technologies": tech_names
@@ -284,20 +300,16 @@ def get_pagespeed(target_url, api_key):
     """Runs the Google PageSpeed Insights scan."""
     print(f"[INFO] Running PageSpeed scan on {target_url}...")
     
-    # If no API key is provided, skip the scan.
     if not api_key:
         print("       [INFO] No PageSpeed API key provided. Skipping scan.")
         print("       [INFO] Get a key: https://developers.google.com/speed/docs/insights/v5/get-started")
         return {"status": "skipped", "details": "No API key provided."}
 
-    # The Google PageSpeed API endpoint
     api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-    
-    # Parameters for the API
     params = {
         'url': target_url,
         'key': api_key,
-        'strategy': 'DESKTOP',  # We can run 'MOBILE' as well, but let's start with one
+        'strategy': 'DESKTOP',
         'category': ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO']
     }
     
@@ -305,12 +317,10 @@ def get_pagespeed(target_url, api_key):
         response = requests.get(api_url, params=params, timeout=60)
         
         if response.status_code == 200:
-            # Add a custom status key for our parser
             data = response.json()
             data['status'] = 'success'
             return data
         else:
-            # Try to parse the error message from Google
             try:
                 error_data = response.json()
                 error_msg = error_data.get("error", {}).get("message", response.text)
@@ -328,7 +338,6 @@ def analyze_security_headers(target_url):
     """Fetches headers using 'requests' and checks for key security headers."""
     print(f"[INFO] Running native security headers scan on {target_url}...")
     
-    # List of key headers to check.
     HEADERS_TO_CHECK = [
         'Content-Security-Policy',
         'Strict-Transport-Security',
@@ -342,12 +351,7 @@ def analyze_security_headers(target_url):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
         }
-        # Use a GET request, as some servers don't respond to HEAD
-        # Follow redirects to get the headers from the *final* destination
         response = requests.get(target_url, headers=headers, timeout=10, allow_redirects=True)
-        
-        # We need to check headers case-insensitively.
-        # The 'requests' headers object already does this.
         response_headers = response.headers
 
         missing_headers = []
@@ -378,23 +382,18 @@ def get_testssl(target_url):
     print(f"[INFO] Running testssl.sh scan on {target_url}... (this may take several minutes)...")
     hostname = urlparse(target_url).hostname
     
-    # Create a temporary file to store the JSON output
     try:
         with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.json') as tmpfile:
             json_output_file = tmpfile.name
         
         command = [TESTSSL_PATH, "--jsonfile", json_output_file, "-U", hostname]
         
-        # Give this a long timeout
         run_subprocess(command, timeout=300)
         
-        # Now, read the JSON output from the file
         if os.path.exists(json_output_file):
             with open(json_output_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            os.remove(json_output_file) # Clean up
-            
-            # FIX: Wrap the list in a dict so it has a 'status' key
+            os.remove(json_output_file)
             return {
                 "status": "success",
                 "data": data
@@ -407,7 +406,6 @@ def get_testssl(target_url):
         return {"status": "error", "details": "Failed to parse testssl.sh JSON."}
     except Exception as e:
         print(f"[Error] An unexpected error occurred in get_testssl: {e}", file=sys.stderr)
-        # Clean up tmpfile if it still exists
         if 'json_output_file' in locals() and os.path.exists(json_output_file):
             os.remove(json_output_file)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
@@ -416,14 +414,11 @@ def get_nmap(target_url):
     """Runs the nmap scan."""
     print(f"[INFO] Running nmap scan on {target_url}...")
     hostname = urlparse(target_url).hostname
-    # -F is "Fast scan" (top 100 ports), -sV is "Version detection"
-    # -oX - sends XML output to stdout
     command = [NMAP_PATH, "-F", "-sV", "-oX", "-", hostname]
     
     try:
         raw_output = run_subprocess(command, timeout=120)
         if raw_output:
-            # We no longer parse here, just return the raw XML
             return {"status": "success", "xml_data": raw_output}
         return {"status": "error", "details": "nmap command failed or returned no output."}
     except Exception as e:
@@ -438,7 +433,7 @@ def get_linkchecker(target_url):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
         }
         response = requests.get(target_url, headers=headers, timeout=10)
-        response.raise_for_status() # Raise an error for bad responses
+        response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'lxml')
         links = soup.find_all('a', href=True)
@@ -448,18 +443,14 @@ def get_linkchecker(target_url):
         
         for link in links:
             href = link['href']
-            
-            # Resolve relative URLs
             full_url = urljoin(target_url, href)
             
-            # Skip mailto, tel, and anchor links
             if full_url.startswith(('mailto:', 'tel:', '#')):
                 continue
                 
             link_info = {"url": full_url, "status_code": None, "status": "pending"}
 
             try:
-                # Use a HEAD request for speed, but follow redirects
                 link_response = requests.head(full_url, headers=headers, timeout=5, allow_redirects=True)
                 link_info["status_code"] = link_response.status_code
                 
@@ -509,7 +500,6 @@ def get_dns_records(target_url):
                 print(f"[Error] DNS scan failed: Domain not found (NXDOMAIN).", file=sys.stderr)
                 return {"status": "error", "details": "Domain not found (NXDOMAIN)."}
             except Exception:
-                # Catch other potential query errors but continue
                 results[rtype] = ["Query failed"]
         return {"status": "success", "data": results}
     except Exception as e:
@@ -524,26 +514,24 @@ def main():
     parser.add_argument("--output", type=str, default="report.json", help="The filename for the JSON output report.")
     parser.add_argument("--api-key", type=str, default=os.environ.get('PAGESPEED_API_KEY'), 
                         help="Google PageSpeed API key. Can also be set via PAGESPEED_API_KEY environment variable.")
-    
-    # v0.3: Added flags for summary and fast mode
     parser.add_argument("--summary", action="store_true", help="Print a human-readable summary of results to the terminal.")
     parser.add_argument("--fast", action="store_true", help="Skip slow scans (nmap and testssl.sh) for a quick check.")
 
     args = parser.parse_args()
 
-    # Add 'https://' if no scheme is provided
+    # v1.0 Polish: Check dependencies immediately after parsing arguments
+    check_dependencies(skip_slow_tools=args.fast)
+
     if not args.url.startswith(('http://', 'https://')):
         print(f"[INFO] No scheme provided, defaulting to https://")
         args.url = f"https://{args.url}"
     
-    # Strip trailing junk
     args.url = args.url.rstrip(')/"')
 
     print(f"--- Starting full scan for {args.url} ---")
     if args.fast:
         print("[INFO] Fast mode enabled. Skipping Nmap and TestSSL.")
 
-    # Initialize the master report structure
     master_report = {
         "scan_target": args.url,
         "scan_timestamp": "", 
@@ -561,45 +549,34 @@ def main():
     # Run each scan
     master_report["reports"]["tech_stack"] = get_tech_stack(args.url)
     
-    # Run PageSpeed and parse it
     raw_pagespeed = get_pagespeed(args.url, args.api_key)
     master_report["reports"]["pagespeed"] = parse_pagespeed(raw_pagespeed)
     
-    # Run native security headers scan
     master_report["reports"]["security_headers"] = analyze_security_headers(args.url)
     
-    # --- testssl.sh scan ---
     if not args.fast:
         master_report["reports"]["testssl"] = get_testssl(args.url)
-    else:
-        master_report["reports"]["testssl"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
-    
-    # Run nmap and parse it
-    if not args.fast:
+        
         raw_nmap = get_nmap(args.url)
         master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
     else:
+        master_report["reports"]["testssl"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
         master_report["reports"]["nmap"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
 
-    # Run linkchecker and parse it
     raw_linkcheck = get_linkchecker(args.url)
     master_report["reports"]["linkchecker"] = parse_linkchecker(raw_linkcheck)
 
-    # Run DNS and parse it
     raw_dns = get_dns_records(args.url)
     master_report["reports"]["dns"] = parse_dns_records(raw_dns)
 
-    # Set the timestamp
     master_report["scan_timestamp"] = datetime.now().isoformat()
 
-    # Write the final report
     try:
         with open(args.output, 'w', encoding='utf-8') as f:
             json.dump(master_report, f, indent=4)
         print(f"\n--- Scan Complete ---")
         print(f"[SUCCESS] Master report saved to {args.output}")
         
-        # Print summary if requested
         if args.summary:
             print_summary(master_report)
 

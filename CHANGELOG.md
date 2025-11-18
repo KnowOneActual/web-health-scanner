@@ -15,11 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `--summary` flag to print a human-readable report of key metrics to the terminal.
 - `--fast` flag to optionally skip slow scans (`nmap` and `testssl.sh`).
+- `check_dependencies` function to verify `nmap` and `testssl.sh` installation on startup.
 - `print_summary` function to format JSON data for the console.
 
 ### Changed
 - Enabled `testssl.sh` scan by default (unless `--fast` is used).
 - Enabled `nmap` scan by default (unless `--fast` is used).
+- Script now attempts to make `testssl.sh` executable automatically if permission is denied.
 
 ### Fixed
 - Fixed a crash where `testssl` output was a list instead of a dict, which broke the report parser.

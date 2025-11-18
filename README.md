@@ -129,9 +129,9 @@ git clone https://github.com/KnowOneActual/web-health-scanner.git)
 cd web-health-scanner 
 ```
 
-2. **Clone testssl.sh:** 
+2. **Clone testssl.sh:** (--depth 1 to make the download faster and smaller).
 ```bash
-git clone https://github.com/testssl/testssl.sh.git
+git clone git clone --depth 1 https://github.com/drwetter/testssl.sh.git
 ```
 3. **Install Python requirements:**
 ```bash
