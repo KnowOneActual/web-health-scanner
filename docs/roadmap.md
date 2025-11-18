@@ -52,19 +52,19 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 * [X] **Bug Fixes:** Resolved all environment variable, URL, and typo issues.
 
 
-### v0.3: Human-Readable Summary (Next Steps)
+### v0.3: Human-Readable Summary (Complete)
 
 **Goal:** Make the tool useful for a quick glance, not just for data nerds.
 
 
 
-* [ ] **Add `--summary` flag:** Add an argument to print a summary to the terminal.
-* [ ] **Create Formatter:** Write a `print_summary` function to output a clean report (e.g., "Performance Score: 86/100", "Missing Headers: 3", "Broken Links: 0").
-* [ ] **(Optional) Add Color:** Integrate a library like `rich` or `colorama` to color-code the summary (red for bad, green for good).
-* [ ] **(Optional) Add `--run-slow-scans` flag:** Add a flag to enable the `testssl.sh` scan.
+* [X] **Add `--summary` flag:** Add an argument to print a summary to the terminal.
+* [X] **Create Formatter:** Write a `print_summary` function to output a clean report (e.g., "Performance Score: 86/100", "Missing Headers: 3", "Broken Links: 0").
+* [ ] **(Optional) Add Color:** Integrate a library like `rich` or `colorama`. (Skipped for now).
+* [X] **Add `--fast` flag:** Implemented a flag to skip slow scans (`nmap`, `testssl.sh`) for quick checks.
 
 
-### v1.0: Polish & Release
+### v1.0: Polish & Release (Next Steps)
 
 **Goal:** Make the tool robust and ready for public use.
 
