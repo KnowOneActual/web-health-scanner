@@ -1,0 +1,31 @@
+name: 🛡️ Dependency Audit (pip-audit)
+
+# Runs on every push to main/master or pull request targeting those branches
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  audit_dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Set up Python 3.x
+        uses: actions/setup-python@v5
+        with:
+          # Use a modern Python version matching your project's requirement (3.9+)
+          python-version: '3.x'
+
+      - name: 🔍 Run pip-audit scan on requirements.txt
+        # Uses the official action maintained by PyPA (Python Packaging Authority)
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          # Specify the requirements file to scan
+          inputs: requirements.txt
+          # The action will automatically install pip-audit, install dependencies, and scan them.
+          # The job will fail if any known vulnerabilities are found (Exit Code 1).

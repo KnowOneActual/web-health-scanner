@@ -12,3 +12,5 @@ beautifulsoup4
 lxml
 #For cross-platform terminal coloring in the summary
 colorama
+#safe XML parser
+defusedxml

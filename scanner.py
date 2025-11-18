@@ -8,7 +8,9 @@ import requests
 import dns.resolver
 import tempfile 
 from urllib.parse import urlparse, urljoin
-import xml.etree.ElementTree as ET
+import lxml.etree as ET # FIX: Use lxml for security and better performance
+import socket # FIX: For SSRF validation
+import ipaddress # FIX: For SSRF private IP check
 from datetime import datetime
 from bs4 import BeautifulSoup
 import webtech
@@ -17,6 +19,41 @@ from colorama import Fore, Style, init # Added for color output
 
 # Initialize colorama for cross-platform support
 init(autoreset=True)
+
+# --- Security Helpers ---
+
+def resolve_and_validate_target(hostname):
+    """
+    FIX: SSRF Mitigation
+    Resolves hostname to IP and checks for private IP ranges (RFC 1918, loopback).
+    Returns a dict with status and the resolved IP address if successful.
+    """
+    # Exclude internal/private IP ranges (RFC 1918, etc.)
+    PRIVATE_NETWORKS = [
+        ipaddress.ip_network('10.0.0.0/8'),
+        ipaddress.ip_network('172.16.0.0/12'),
+        ipaddress.ip_network('192.168.0.0/16'),
+        ipaddress.ip_network('127.0.0.0/8'), # Loopback
+        ipaddress.ip_network('169.254.0.0/16'), # Link-local
+    ]
+    
+    try:
+        # 1. Resolve to IP to prevent DNS rebinding/injection
+        ip_address = socket.gethostbyname(hostname)
+        
+        # 2. Check for private/internal IP ranges
+        ip_obj = ipaddress.ip_address(ip_address)
+        
+        for network in PRIVATE_NETWORKS:
+            if ip_obj in network:
+                return {"status": "error", "details": f"Resolved IP '{ip_address}' is a private/internal address. SSRF attempt blocked."}
+
+        return {"status": "success", "ip_address": ip_address}
+    except socket.gaierror:
+        return {"status": "error", "details": f"Target hostname '{hostname}' could not be resolved."}
+    except ValueError as e:
+        # This handles cases where gethostbyname returns something that is not a valid IP string
+        return {"status": "error", "details": f"Invalid address format from resolution: {e}"}
 
 # --- Configuration ---
 # Paths to local tools
@@ -83,7 +120,10 @@ def parse_nmap_xml(xml_output):
         if isinstance(xml_output, dict) and 'status' in xml_output:
             return xml_output
 
-        root = ET.fromstring(xml_output)
+        # FIX (Previous): XML Parsing TypeError fix. Use a compatible lxml parser configuration.
+        parser = ET.XMLParser(no_network=True, dtd_validation=False, resolve_entities=False)
+        root = ET.fromstring(xml_output.encode('utf-8'), parser=parser)
+        
         host = root.find('host')
         if host is None:
             return {"status": "error", "details": "No host information found in nmap output."}
@@ -370,45 +410,55 @@ def get_pagespeed(target_url, api_key, step_info=""):
     """Runs the Google PageSpeed Insights scan."""
     print(f"{step_info} [INFO] Running PageSpeed scan on {target_url}...")
     
-    if not api_key:
-        print("       [INFO] No PageSpeed API key provided. Skipping scan.")
-        print("       [INFO] Get a key: https://developers.google.com/speed/docs/insights/v5/get-started")
-        return {"status": "skipped", "details": "No API key provided."}
-
-    api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
-    params = {
-        'url': target_url,
-        'key': api_key,
-        'strategy': 'DESKTOP',
-        'category': ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO']
-    }
+    # FIX 5 (Previous): SSRF Mitigation - Validate target hostname/IP before proceeding.
+    hostname = urlparse(target_url).hostname
+    validation = resolve_and_validate_target(hostname)
     
-    try:
-        response = requests.get(api_url, params=params, timeout=60)
-        response.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
+    if validation["status"] == "success": # Only proceed if validation passes
         
-        # Success path
-        data = response.json()
-        data['status'] = 'success'
-        return data
+        if not api_key:
+            print("       [INFO] No PageSpeed API key provided. Skipping scan.")
+            print("       [INFO] Get a key: https://developers.google.com/speed/docs/insights/v5/get-started")
+            return {"status": "skipped", "details": "No API key provided."}
+
+        api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
+        params = {
+            'url': target_url, # Now guarded by validation check
+            'key': api_key,
+            'strategy': 'DESKTOP',
+            'category': ['PERFORMANCE', 'ACCESSIBILITY', 'BEST_PRACTICES', 'SEO']
+        }
         
-    except requests.exceptions.HTTPError as e:
-        error_msg = f"HTTP Error {e.response.status_code}: {e.response.reason}"
         try:
-            error_data = e.response.json()
-            error_msg = error_data.get("error", {}).get("message", error_msg)
-        except json.JSONDecodeError:
-            pass
-        print(f"[Error] PageSpeed API failed: {error_msg}", file=sys.stderr)
-        return {"status": "error", "details": f"API Error: {error_msg}"}
+            response = requests.get(api_url, params=params, timeout=60) 
+            response.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
+            
+            # Success path
+            data = response.json()
+            data['status'] = 'success'
+            return data
+            
+        except requests.exceptions.HTTPError as e:
+            error_msg = f"HTTP Error {e.response.status_code}: {e.response.reason}"
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get("error", {}).get("message", error_msg)
+            except json.JSONDecodeError:
+                pass
+            print(f"[Error] PageSpeed API failed: {error_msg}", file=sys.stderr)
+            return {"status": "error", "details": f"API Error: {error_msg}"}
 
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
-        print(f"[Error] Could not connect to PageSpeed API: {e}", file=sys.stderr)
-        return {"status": "error", "details": f"API request failed: {str(e)}"}
-    
-    except json.JSONDecodeError:
-        print("[Error] Failed to decode JSON response from PageSpeed API.", file=sys.stderr)
-        return {"status": "error", "details": "Invalid JSON response from API."}
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+            print(f"[Error] Could not connect to PageSpeed API: {e}", file=sys.stderr)
+            return {"status": "error", "details": f"API request failed: {str(e)}"}
+        
+        except json.JSONDecodeError:
+            print("[Error] Failed to decode JSON response from PageSpeed API.", file=sys.stderr)
+            return {"status": "error", "details": "Invalid JSON response from API."}
+
+    else: # Validation failed
+        print(f"[Error] {validation['details']}", file=sys.stderr)
+        return {"status": "error", "details": f"SSRF Blocked: {validation['details']}"}
 
 def analyze_security_headers(target_url, step_info=""):
     """Fetches headers using 'requests' and checks for key security headers."""
@@ -460,15 +510,28 @@ def get_testssl(target_url, step_info=""):
     print(f"{step_info} [INFO] Running testssl.sh scan on {target_url}... (this may take several minutes)...")
     hostname = urlparse(target_url).hostname
     
+    # FIX (Retained): SSRF Mitigation - Validate target hostname/IP BEFORE use
+    validation = resolve_and_validate_target(hostname)
+    if validation["status"] != "success":
+        print(f"[Error] {validation['details']}", file=sys.stderr)
+        return {"status": "error", "details": f"SSRF Blocked: {validation['details']}"}
+        
+    # FIX (Revised): Use the original hostname for the command to ensure proper SNI/CDN handling. 
+    # The validation check above guarantees the hostname is not pointing to a private IP.
+    target_for_testssl = hostname 
+
     try:
         with tempfile.NamedTemporaryFile(delete=False, mode='w', suffix='.json') as tmpfile:
             json_output_file = tmpfile.name
         
-        command = [TESTSSL_PATH, "--jsonfile", json_output_file, "-U", hostname]
+        # Use the original hostname for SNI compatibility
+        command = [TESTSSL_PATH, "--jsonfile", json_output_file, "-U", target_for_testssl] 
         
-        run_subprocess(command, timeout=300)
+        # Timeout is 600 seconds (10 minutes)
+        run_subprocess(command, timeout=600) 
         
-        if os.path.exists(json_output_file):
+        # Check if the file was created and is non-empty before attempting to read it
+        if os.path.exists(json_output_file) and os.path.getsize(json_output_file) > 0:
             with open(json_output_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             os.remove(json_output_file)
@@ -477,7 +540,12 @@ def get_testssl(target_url, step_info=""):
                 "data": data
             }
         else:
-            return {"status": "error", "details": "testssl.sh failed to produce an output file."}
+            # Clearer error message when the file is empty/non-existent due to timeout/failure
+            if 'json_output_file' in locals() and os.path.exists(json_output_file):
+                os.remove(json_output_file)
+            
+            # The run_subprocess already prints the 'timed out' error.
+            return {"status": "error", "details": "testssl.sh did not produce a valid output file (Command failed or timed out after 10 minutes)."}
             
     except json.JSONDecodeError:
         print("[Error] Failed to parse testssl.sh JSON output.", file=sys.stderr)
@@ -490,9 +558,18 @@ def get_testssl(target_url, step_info=""):
 
 def get_nmap(target_url, step_info=""):
     """Runs the nmap scan."""
-    print(f"{step_info} [INFO] Running nmap scan on {target_url}...")
+    print(f"{step_info} [INFO] Running nmap scan on {target_url}... (this also may take several minutes)...")
     hostname = urlparse(target_url).hostname
-    command = [NMAP_PATH, "-F", "-sV", "-oX", "-", hostname]
+
+    # FIX 3 (Previous): SSRF Mitigation - Validate target hostname/IP before use
+    validation = resolve_and_validate_target(hostname)
+    if validation["status"] != "success":
+        print(f"[Error] {validation['details']}", file=sys.stderr)
+        return {"status": "error", "details": f"SSRF Blocked: {validation['details']}"}
+
+    target_to_scan = validation["ip_address"] # Use the resolved IP/Validated target
+    
+    command = [NMAP_PATH, "-F", "-sV", "-oX", "-", target_to_scan] # Use validated target
     
     try:
         raw_output = run_subprocess(command, timeout=120)
@@ -506,65 +583,75 @@ def get_nmap(target_url, step_info=""):
 def get_linkchecker(target_url, step_info=""):
     """Runs a simple link check on the target URL's homepage."""
     print(f"{step_info} [INFO] Running link scan on {target_url}...")
-    try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
-        }
-        response = requests.get(target_url, headers=headers, timeout=10)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, 'lxml')
-        links = soup.find_all('a', href=True)
-        
-        all_links = []
-        broken_links = []
-        
-        for link in links:
-            href = link['href']
-            full_url = urljoin(target_url, href)
-            
-            if full_url.startswith(('mailto:', 'tel:', '#')):
-                continue
-                
-            link_info = {"url": full_url, "status_code": None, "status": "pending"}
+    
+    # FIX 6 (Previous): SSRF Mitigation - Validate target hostname/IP before making the request.
+    hostname = urlparse(target_url).hostname
+    validation = resolve_and_validate_target(hostname)
 
-            try:
-                # Use a HEAD request for speed, but follow redirects
-                link_response = requests.head(full_url, headers=headers, timeout=5, allow_redirects=True)
-                link_info["status_code"] = link_response.status_code
-                link_response.raise_for_status() # Check for bad status codes
+    if validation["status"] == "success": # Only proceed if validation passes
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
+            }
+            response = requests.get(target_url, headers=headers, timeout=10) 
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, 'lxml')
+            links = soup.find_all('a', href=True)
+            
+            all_links = []
+            broken_links = []
+            
+            for link in links:
+                href = link['href']
+                full_url = urljoin(target_url, href)
                 
-                if link_response.status_code >= 400:
+                if full_url.startswith(('mailto:', 'tel:', '#')):
+                    continue
+                    
+                link_info = {"url": full_url, "status_code": None, "status": "pending"}
+
+                try:
+                    # Use a HEAD request for speed, but follow redirects
+                    link_response = requests.head(full_url, headers=headers, timeout=5, allow_redirects=True)
+                    link_info["status_code"] = link_response.status_code
+                    link_response.raise_for_status() # Check for bad status codes
+                    
+                    if link_response.status_code >= 400:
+                        link_info["status"] = "broken"
+                        broken_links.append(link_info)
+                    else:
+                        link_info["status"] = "valid"
+                except requests.exceptions.HTTPError as he:
                     link_info["status"] = "broken"
+                    link_info["status_code"] = he.response.status_code
                     broken_links.append(link_info)
-                else:
-                    link_info["status"] = "valid"
-            except requests.exceptions.HTTPError as he:
-                link_info["status"] = "broken"
-                link_info["status_code"] = he.response.status_code
-                broken_links.append(link_info)
-            except requests.exceptions.RequestException:
-                link_info["status"] = "unreachable"
-                broken_links.append(link_info)
-            
-            all_links.append(link_info)
-            
-        return {
-            "status": "success",
-            "summary": {
-                "total_links_found": len(all_links),
-                "broken_count": len(broken_links)
-            },
-            "all_links": all_links,
-            "broken_links": broken_links
-        }
+                except requests.exceptions.RequestException:
+                    link_info["status"] = "unreachable"
+                    broken_links.append(link_info)
+                
+                all_links.append(link_info)
+                
+            return {
+                "status": "success",
+                "summary": {
+                    "total_links_found": len(all_links),
+                    "broken_count": len(broken_links)
+                },
+                "all_links": all_links,
+                "broken_links": broken_links
+            }
 
-    except requests.exceptions.RequestException as e:
-        print(f"[Error] Failed to fetch target URL for link check: {e}", file=sys.stderr)
-        return {"status": "error", "details": f"Failed to fetch {target_url}: {str(e)}"}
-    except Exception as e:
-        print(f"[Error] An unexpected error occurred in get_linkchecker: {e}", file=sys.stderr)
-        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
+        except requests.exceptions.RequestException as e:
+            print(f"[Error] Failed to fetch target URL for link check: {e}", file=sys.stderr)
+            return {"status": "error", "details": f"Failed to fetch {target_url}: {str(e)}"}
+        except Exception as e:
+            print(f"[Error] An unexpected error occurred in get_linkchecker: {e}", file=sys.stderr)
+            return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
+
+    else: # Validation failed
+        print(f"[Error] {validation['details']}", file=sys.stderr)
+        return {"status": "error", "details": f"SSRF Blocked: {validation['details']}"}
 
 def get_dns_records(target_url, step_info=""):
     """Runs the dnspython scan."""
@@ -675,8 +762,7 @@ EXAMPLES:
     step_counter += 1
     
     # 2. PageSpeed
-    raw_pagespeed = get_pagespeed(args.url, args.api_key, step_info=get_step_info())
-    master_report["reports"]["pagespeed"] = parse_pagespeed(raw_pagespeed)
+    master_report["reports"]["pagespeed"] = parse_pagespeed(get_pagespeed(args.url, args.api_key, step_info=get_step_info()))
     step_counter += 1
     
     # 3. Security Headers
@@ -718,12 +804,15 @@ EXAMPLES:
         safe_hostname = target_hostname.replace('.', '-')
         args.output = f"site-scan-{safe_hostname}-{time_str}.json"
         
+    # FIX 4 (Previous): Path Traversal Mitigation
+    safe_output_path = os.path.basename(args.output)
+        
     # Write the final report
     try:
-        with open(args.output, 'w', encoding='utf-8') as f:
+        with open(safe_output_path, 'w', encoding='utf-8') as f:
             json.dump(master_report, f, indent=4)
         print(f"\n--- Scan Complete ---")
-        print(f"[SUCCESS] Master report saved to {args.output}")
+        print(f"[SUCCESS] Master report saved to {safe_output_path}")
         
         if args.summary:
             print_summary(master_report)

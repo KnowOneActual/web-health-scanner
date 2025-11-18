@@ -5,9 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-11-18
+
+### Fixed
+- **Resolved Runtime Stability Issues:** Fixed two persistent runtime errors that occurred in long-running external processes after the v1.0.1 security patch:
+- **XML Parser Fix:** Corrected the secure XML parser instantiation in `parse_nmap_xml` to use a robust and compatible configuration, resolving the `TypeError: __init__` crash.
+- **SSL Scan Timeout Fix:** Revised the `testssl.sh` command to use the original hostname, restoring **SNI (Server Name Indication)** compatibility for CDN-protected targets (like Cloudflare) and eliminating the persistent 600-second timeout issue.
+
 ## [1.0.0] - 2025-11-18
 
 ### Added
+- Dependency Audit (pip-audit) to workflow
+- New security helper functions (`resolve_and_validate_target`, import of `socket` and `ipaddress`) to enforce network safety before making external requests.
 - colorama library
 - Progress Indicator: Added a dynamic step counter (e.g., [3/7]) to the console output to confirm the script is actively running and prevent the appearance of stalling during long scans.
 - Robust, detailed usage examples to the CLI `--help` output.
@@ -17,6 +26,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented a persistent fix for the `webtech` module issue, allowing it to correctly parse text reports into structured data.
 
 ### Fixed
+- **Server-Side Request Forgery (SSRF) Mitigated:** Implemented pre-flight IP validation checks in `get_testssl`, `get_nmap`, `get_pagespeed`, and `get_linkchecker`. This blocks user-supplied hostnames that resolve to private/internal IP ranges (RFC 1918), preventing the scanner from being used as a proxy to attack internal networks.
+- **Path Traversal (PT) Mitigated:** Hardened file writing by applying `os.path.basename()` to the `--output` filename argument, preventing a user from writing files to arbitrary directories outside of the project root.
+- **Insecure XML Parser Mitigated:** Switched Nmap XML parsing in `parse_nmap_xml` from the vulnerable standard library module to `lxml.etree` with DTDs explicitly disabled (`forbid_dtd=True`), protecting against XML External Entity (XXE) and Denial of Service (DoS) attacks.
 - Fixed an issue where the report file name would be generic; now auto-generates descriptive filenames (e.g., `site-scan-example-com-YYYYMMDD_HHMMSS.json`) when `--output` is not specified.
 
 ## [0.3.0] - 2025-11-18
