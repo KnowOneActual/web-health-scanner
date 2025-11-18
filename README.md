@@ -23,7 +23,7 @@ The goal is to create a simple, free tool that anyone can use to get a deep-leve
 
 ## 💡 Project Philosophy: The Evolution of a Scanner
 
-The development of Site-Checkup is a perfect example of why **technical flexibility** is vital in building good software. The project started small, focusing on simple **web scraping** to gather data. However, that original design proved insufficient for creating a reliable and secure tool.
+The development of Website-Checkup is a perfect example of why **technical flexibility** is vital in building good software. The project started small, focusing on simple **web scraping** to gather data. However, that original design proved insufficient for creating a reliable and secure tool.
 
 It became clear that relying on fragile custom scraping and brittle subprocess calls presented three major, unavoidable challenges:
 
@@ -31,7 +31,7 @@ It became clear that relying on fragile custom scraping and brittle subprocess c
 * **Incompleteness:** I couldn't gather deep, validated metrics (like Lighthouse scores) without moving to official **APIs**.
 * **Security Risk:** Heavy reliance on external command-line tools and unchecked user input created high-severity **vulnerabilities**.
 
-To make the project fundamentally better and more reliable, a **strategic pivot** was necessary. I realized that a truly robust tool needed to prioritize stability and security over the initial design. This journey confirmed that I needed to be able to pivot and be flexible from the original design to make something ultimately better.
+To make the project better and more reliable, a **strategic pivot** was necessary. I realized that a truly robust tool needed to prioritize stability and security over the initial design. This journey confirmed that I needed to be able to pivot and be flexible from the original design to make something ultimately better.
 
 ### Key Learnings & Improvements
 

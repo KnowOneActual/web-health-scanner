@@ -8,14 +8,14 @@ import requests
 import dns.resolver
 import tempfile
 from urllib.parse import urlparse, urljoin
-import lxml.etree as ET  # FIX: Use lxml for security and better performance
-import socket  # FIX: For SSRF validation
-import ipaddress  # FIX: For SSRF private IP check
+import lxml.etree as ET  
+import socket  
+import ipaddress
 from datetime import datetime
 from bs4 import BeautifulSoup
 import webtech
 from webtech.utils import ConnectionException
-from colorama import Fore, Style, init  # Added for color output
+from colorama import Fore, Style, init
 
 # Initialize colorama for cross-platform support
 init(autoreset=True)
