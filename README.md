@@ -1,5 +1,5 @@
 <p align="center">
-<img src="assets/img/web-health-scanner_logo.webp" alt="alt text" width="150">
+<img src="assets/img/web-health-scanner_logo_white.webp" alt="alt text" width="150">
 </p>
 
 # 🌐 Website-Checkup
