@@ -20,15 +20,15 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 * [X] **Setup:** Create scanner.py with argparse to accept a URL and an output file.
 * [X] **Setup:** Create requirements.txt with initial libraries.
 * [X] **API Call:** Implement Google PageSpeed Insights API call.
-* [X] **Subprocess:** Implement secheaders call and capture JSON.
-* [X] **Subprocess:** Implement nmap call and capture XML.
-* [X] **Library:** Implement dnspython to get all major DNS records.
-* [X] **Library:** Implement custom link checker.
-* [ ] **Subprocess:** Implement testssl.sh call. (Implemented, but skipped in main() for speed).
-* [ ] **API Call:** Implement web-check.xyz API call. (Blocked by Cloudflare, needs alternative).
+* [X] **Subprocess:** Implement `secheaders` call. (Removed in v0.2)
+* [X] **Subprocess:** Implement `nmap` call and capture XML.
+* [X] **Library:** Implement `dnspython` to get all major DNS records.
+* [X] **Library:** Implement custom link checker using `requests` and `BeautifulSoup`.
+* [X] **Subprocess:** Implement `testssl.sh` call. (Implemented, but skipped in `main()` for speed).
+* [X] **API Call:** Implement `web-check.xyz` API call. (Blocked by Cloudflare, abandoned in v0.2).
 
 
-### v0.2: Data Consolidation & Parsing (In Progress)
+### v0.2: Data Consolidation & Parsing (Complete)
 
 **Goal:** Take all the raw data from v0.1 and parse it into a single, clean JSON report.
 
@@ -36,30 +36,32 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 
 
 
-* [X] Parse PageSpeed JSON (parse_pagespeed).
-* [X] Parse nmap XML output (parse_nmap_xml).
+* [X] Parse PageSpeed JSON (`parse_pagespeed`).
+* [X] Parse nmap XML output (`parse_nmap_xml`).
+* [X] Parse link checker output (`parse_linkchecker`).
+* [X] Parse DNS records (`parse_dns_records`).
 
-**In Progress / To-Do:**
-
-
-
-* [ ] **Fix Buggy Parsers:**
-    * [ ] parse_secheaders: This parser is buggy and failing. It needs to be made more robust to handle different data types (lists, dicts, strings) from the get_secheaders function.
-* [ ] **Write New Parsers:**
-    * [ ] parse_linkchecker: Create a parser to summarize the link check report (e.g., return summary and broken_links).
-    * [ ] parse_dns_records: Create a parser to clean up the dnspython output (e.g., remove empty [] arrays).
-    * [ ] parse_testssl: Write a parser for the testssl.sh JSON output.
+**Key Changes & Fixes:**
 
 
-### v0.3: Human-Readable Summary
+
+* [X] **Replaced Buggy Tools:** Removed the external `secheaders` dependency.
+* [X] **New Native Scan:** Wrote `analyze_security_headers` function to check headers directly with `requests`, which works perfectly.
+* [ ] **Replaced Blocked API:** Replaced the `web-check.xyz` API with the `webtech` library. ** Started. Needs work yet.**
+* [X] **Robust Error Handling:** Added error checking to the `webtech` scan to prevent crashes when it fails, allowing other scans to complete.
+* [X] **Bug Fixes:** Resolved all environment variable, URL, and typo issues.
+
+
+### v0.3: Human-Readable Summary (Next Steps)
 
 **Goal:** Make the tool useful for a quick glance, not just for data nerds.
 
 
 
-* [ ] **Add --summary flag:** Add an argument to print a summary to the terminal.
-* [To-Do] **Create Formatter:** Write a function to print a clean summary (e.g., "Performance Score: 85/100", "Missing Headers: 3", "Broken Links: 5").
-* [To-Do] **(Optional) Add Color:** Integrate a library like rich or colorama to color-code the summary (red for bad, green for good).
+* [ ] **Add `--summary` flag:** Add an argument to print a summary to the terminal.
+* [ ] **Create Formatter:** Write a `print_summary` function to output a clean report (e.g., "Performance Score: 86/100", "Missing Headers: 3", "Broken Links: 0").
+* [ ] **(Optional) Add Color:** Integrate a library like `rich` or `colorama` to color-code the summary (red for bad, green for good).
+* [ ] **(Optional) Add `--run-slow-scans` flag:** Add a flag to enable the `testssl.sh` scan.
 
 
 ### v1.0: Polish & Release
@@ -68,8 +70,8 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 
 
 
-* [ ] **Dependency Checks:** Add code to gracefully check if nmap, testssl.sh, etc., are available on the user's system and provide helpful error messages if not.
-* [ ] **Error Handling:** Add robust try...except blocks for all API calls and subprocesses.
-* [ ] **Documentation:** Finalize the README.md with complete installation and usage instructions.
-* [ ] **License:** Add an MIT LICENSE.txt file.
-* [ ] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run black code formatter).
+* [ ] **Dependency Checks:** Add code to gracefully check if `nmap`, `testssl.sh`, etc., are available on the user's system and provide helpful error messages if not.
+* [ ] **Error Handling:** Add robust `try...except` blocks for all API calls and subprocesses (partially complete).
+* [ ] **Documentation:** Finalize the `README.md` with complete installation and usage instructions.
+* [ ] **License:** Add an `MIT LICENSE.txt` file. (File is `LICENSE`, just need to update this item).
+* [ ] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run `black` code formatter).

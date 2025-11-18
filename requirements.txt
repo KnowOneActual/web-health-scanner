@@ -1,11 +1,12 @@
-
-#For making API requests
-requests
-#For advanced DNS lookups
-dnspython
 #For finding broken links
 LinkChecker
-#For parsing HTML to find links
+# For making API requests
+requests
+# For advanced DNS lookups
+dnspython
+# For identifying website technologies
+webtech
+# For parsing HTML to find links
 beautifulsoup4
-#For fast HTML parsing
+# For fast HTML parsing
 lxml

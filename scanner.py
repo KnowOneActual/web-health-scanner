@@ -10,6 +10,8 @@ from urllib.parse import urlparse, urljoin
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from bs4 import BeautifulSoup
+import webtech
+from webtech.utils import ConnectionException
 
 # --- Configuration ---
 # Paths to local tools
@@ -17,7 +19,6 @@ from bs4 import BeautifulSoup
 TESTSSL_PATH = "./testssl.sh/testssl.sh"
 # Assumes nmap is in the system's PATH
 NMAP_PATH = "nmap"
-# NOTE: SECHEADERS_PATH has been removed as we no longer use the tool
 
 
 # --- Helper Functions ---
@@ -173,30 +174,32 @@ def parse_dns_records(raw_data):
 
 # --- Scan Functions ---
 
-def get_web_check(target_url):
-    """Runs the web-check.xyz scan."""
-    print(f"[INFO] Running web-check scan on {target_url}...")
-    hostname = urlparse(target_url).hostname
-    api_url = f"https://web-check.xyz/api/scan?url={hostname}"
-    
-    # Add a User-Agent to mimic a browser
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
-    }
-
+def get_tech_stack(target_url):
+    """Runs the webtech scan to identify site technologies."""
+    print(f"[INFO] Running tech stack scan on {target_url}...")
     try:
-        response = requests.get(api_url, headers=headers, timeout=30)
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 403:
-            print("[Error] web-check API returned a 403 (Cloudflare block). Scan skipped.", file=sys.stderr)
-            return {"status": "error", "details": "API scan blocked by Cloudflare."}
-        else:
-            print(f"[Error] web-check API returned status code {response.status_code}", file=sys.stderr)
-            return {"status": "error", "details": f"API returned status code {response.status_code}"}
-    except requests.exceptions.RequestException as e:
-        print(f"[Error] Could not connect to web-check API: {e}", file=sys.stderr)
-        return {"status": "error", "details": f"API request failed: {str(e)}"}
+        wt = webtech.WebTech()
+        # Run the scan. This returns a dict with 'tech_names' and 'headers'
+        report = wt.start_from_url(target_url, timeout=5) 
+        
+        # *** THIS IS THE FIX: Check if the report is a dictionary ***
+        if not isinstance(report, dict):
+            print(f"[Error] webtech scan returned unexpected data type: {type(report)}", file=sys.stderr)
+            return {"status": "error", "details": "Webtech scan did not return a valid report object."}
+
+        # We only really care about the 'tech_names' list
+        tech_names = report.get('tech_names', [])
+        
+        return {
+            "status": "success",
+            "technologies": tech_names
+        }
+    except ConnectionException:
+        print(f"[Error] Tech stack scan failed: Connection error for {target_url}", file=sys.stderr)
+        return {"status": "error", "details": "Connection error."}
+    except Exception as e:
+        print(f"[Error] An unexpected error occurred in get_tech_stack: {e}", file=sys.stderr)
+        return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
 def get_pagespeed(target_url, api_key):
     """Runs the Google PageSpeed Insights scan."""
@@ -209,7 +212,6 @@ def get_pagespeed(target_url, api_key):
         return {"status": "skipped", "details": "No API key provided."}
 
     # The Google PageSpeed API endpoint
-    # *** THIS IS THE FIX ***
     api_url = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
     
     # Parameters for the API
@@ -445,7 +447,6 @@ def main():
     # Add 'https://' if no scheme is provided
     if not args.url.startswith(('http://', 'https://')):
         print(f"[INFO] No scheme provided, defaulting to https://")
-        # *** THIS IS THE FIX ***
         args.url = f"https://{args.url}"
     
     # Strip trailing junk
@@ -458,7 +459,7 @@ def main():
         "scan_target": args.url,
         "scan_timestamp": "", # Will be set at the end
         "reports": {
-            "web_check": {},
+            "tech_stack": {},
             "pagespeed": {},
             "security_headers": {},
             "testssl": {},
@@ -469,7 +470,7 @@ def main():
     }
 
     # Run each scan
-    master_report["reports"]["web_check"] = get_web_check(args.url)
+    master_report["reports"]["tech_stack"] = get_tech_stack(args.url)
     
     # Run PageSpeed and parse it
     raw_pagespeed = get_pagespeed(args.url, args.api_key)
