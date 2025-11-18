@@ -64,4 +64,4 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 * [X] **Error Handling:** Added robust `try...except` blocks for all API calls and subprocesses.
 * [X] **Documentation:** Finalized the `README.md` and added detailed examples to the `--help` output.
 * [X] **License:** License file is present and correct.
-* [ ] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run `black` code formatter).
+* [X] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run `black` code formatter).
