@@ -7,10 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Planned
+- v1.0 Polish (Dependency checks, detailed README).
+
+## [0.3.0] - 2025-11-18
+
 ### Added
-- Planning for `v0.3: Human-Readable Summary`.
-- `--summary` flag to print a clean summary to the terminal.
-- `--run-slow-scans` flag to optionally run the `testssl.sh` scan.
+- `--summary` flag to print a human-readable report of key metrics to the terminal.
+- `--fast` flag to optionally skip slow scans (`nmap` and `testssl.sh`).
+- `print_summary` function to format JSON data for the console.
+
+### Changed
+- Enabled `testssl.sh` scan by default (unless `--fast` is used).
+- Enabled `nmap` scan by default (unless `--fast` is used).
+
+### Fixed
+- Fixed a crash where `testssl` output was a list instead of a dict, which broke the report parser.
 
 ## [0.2.0] - 2025-11-17
 
@@ -53,6 +65,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `get_dns_records` (dnspython library)
   - `get_testssl` (testssl.sh subprocess)
 - `main` function to orchestrate all scans and save the raw data to a `report.json` file.
-
-### Added
-- Initial project setup.

@@ -45,7 +45,7 @@ def run_subprocess(command, timeout=60):
 def parse_nmap_xml(xml_output):
     """Parses the raw Nmap XML to extract open ports and services."""
     try:
-        # Pass through errors (e.g., if nmap failed)
+        # Pass through errors (e.g., if nmap failed or was skipped)
         if isinstance(xml_output, dict) and 'status' in xml_output:
             return xml_output
 
@@ -172,6 +172,85 @@ def parse_dns_records(raw_data):
         print(f"[Error] An unexpected error occurred in parse_dns_records: {e}", file=sys.stderr)
         return {"status": "error", "details": f"An unexpected error occurred: {str(e)}"}
 
+def print_summary(report):
+    """Prints a human-readable summary of the scan results to the console."""
+    print("\n" + "="*40)
+    print(f"   SCAN SUMMARY: {report['scan_target']}")
+    print("="*40 + "\n")
+
+    # 1. PageSpeed
+    print("--- Google PageSpeed ---")
+    ps = report["reports"].get("pagespeed", {})
+    if ps.get("status") == "success":
+        scores = ps.get("scores", {})
+        print(f"  Performance:    {scores.get('performance')}/100")
+        print(f"  Accessibility:  {scores.get('accessibility')}/100")
+        print(f"  Best Practices: {scores.get('best_practices')}/100")
+        print(f"  SEO:            {scores.get('seo')}/100")
+    else:
+        print(f"  [!] Scan Failed/Skipped: {ps.get('details', 'Unknown error')}")
+
+    # 2. Security Headers
+    print("\n--- Security Headers ---")
+    headers = report["reports"].get("security_headers", {})
+    if headers.get("status") == "success":
+        missing = headers.get("missing_headers", [])
+        if not missing:
+            print("  [+] All key headers found!")
+        else:
+            print(f"  [!] Missing {len(missing)} headers:")
+            for h in missing:
+                print(f"      - {h}")
+    else:
+        print(f"  [!] Scan Failed: {headers.get('details')}")
+
+    # 3. Broken Links
+    print("\n--- Broken Links ---")
+    links = report["reports"].get("linkchecker", {})
+    if links.get("status") == "success":
+        broken = links.get("broken_links", [])
+        count = links.get("summary", {}).get("broken_count", 0)
+        if count == 0:
+            print("  [+] No broken links found.")
+        else:
+            print(f"  [!] Found {count} broken links:")
+            # Print first 3 only to keep summary clean
+            for link in broken[:3]:
+                 print(f"      - {link['status_code']}: {link['url']}")
+            if count > 3:
+                print(f"      ...and {count - 3} more (see JSON report).")
+    else:
+        print(f"  [!] Scan Failed: {links.get('details')}")
+
+    # 4. Nmap (Ports)
+    print("\n--- Open Ports (Nmap) ---")
+    nmap = report["reports"].get("nmap", {})
+    if nmap.get("status") == "success":
+        ports = nmap.get("open_ports", [])
+        if not ports:
+            print("  [+] No open ports found (in top 100).")
+        else:
+            for p in ports:
+                print(f"  - Port {p['portid']} ({p['service']}): {p['state']}")
+    elif nmap.get("status") == "skipped":
+         print("  [i] Skipped (Fast Mode)")
+    else:
+        print(f"  [!] Scan Failed: {nmap.get('details')}")
+
+    # 5. TestSSL
+    print("\n--- SSL/TLS Security ---")
+    ssl = report["reports"].get("testssl", {})
+    if ssl.get("status") == "success":
+        # TestSSL output is huge, so just generic success message for now
+        print("  [+] Scan complete. Check JSON report for deep analysis.")
+    elif ssl.get("status") == "skipped":
+        print("  [i] Skipped (Fast Mode)")
+    else:
+        print(f"  [!] Scan Failed/Skipped: {ssl.get('details')}")
+
+    print("\n" + "="*40 + "\n")
+
+
 # --- Scan Functions ---
 
 def get_tech_stack(target_url):
@@ -182,7 +261,7 @@ def get_tech_stack(target_url):
         # Run the scan. This returns a dict with 'tech_names' and 'headers'
         report = wt.start_from_url(target_url, timeout=5) 
         
-        # *** THIS IS THE FIX: Check if the report is a dictionary ***
+        # Check if the report is a dictionary
         if not isinstance(report, dict):
             print(f"[Error] webtech scan returned unexpected data type: {type(report)}", file=sys.stderr)
             return {"status": "error", "details": "Webtech scan did not return a valid report object."}
@@ -250,7 +329,6 @@ def analyze_security_headers(target_url):
     print(f"[INFO] Running native security headers scan on {target_url}...")
     
     # List of key headers to check.
-    # We check for their *presence*, not their content (for now).
     HEADERS_TO_CHECK = [
         'Content-Security-Policy',
         'Strict-Transport-Security',
@@ -315,7 +393,12 @@ def get_testssl(target_url):
             with open(json_output_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             os.remove(json_output_file) # Clean up
-            return data
+            
+            # FIX: Wrap the list in a dict so it has a 'status' key
+            return {
+                "status": "success",
+                "data": data
+            }
         else:
             return {"status": "error", "details": "testssl.sh failed to produce an output file."}
             
@@ -439,9 +522,13 @@ def main():
     parser = argparse.ArgumentParser(description="Run a full website health check.")
     parser.add_argument("url", type=str, help="The target URL to scan (e.g., https://example.com)")
     parser.add_argument("--output", type=str, default="report.json", help="The filename for the JSON output report.")
-    # Add the API key argument
     parser.add_argument("--api-key", type=str, default=os.environ.get('PAGESPEED_API_KEY'), 
                         help="Google PageSpeed API key. Can also be set via PAGESPEED_API_KEY environment variable.")
+    
+    # v0.3: Added flags for summary and fast mode
+    parser.add_argument("--summary", action="store_true", help="Print a human-readable summary of results to the terminal.")
+    parser.add_argument("--fast", action="store_true", help="Skip slow scans (nmap and testssl.sh) for a quick check.")
+
     args = parser.parse_args()
 
     # Add 'https://' if no scheme is provided
@@ -453,11 +540,13 @@ def main():
     args.url = args.url.rstrip(')/"')
 
     print(f"--- Starting full scan for {args.url} ---")
+    if args.fast:
+        print("[INFO] Fast mode enabled. Skipping Nmap and TestSSL.")
 
     # Initialize the master report structure
     master_report = {
         "scan_target": args.url,
-        "scan_timestamp": "", # Will be set at the end
+        "scan_timestamp": "", 
         "reports": {
             "tech_stack": {},
             "pagespeed": {},
@@ -480,15 +569,17 @@ def main():
     master_report["reports"]["security_headers"] = analyze_security_headers(args.url)
     
     # --- testssl.sh scan ---
-    # This scan is very slow, so we skip it by default.
-    # To enable, uncomment the following line:
-    print("[INFO] Skipping testssl.sh scan for faster development.")
-    master_report["reports"]["testssl"] = {"status": "skipped", "details": "Scan skipped by default in script."}
-    # master_report["reports"]["testssl"] = get_testssl(args.url)
+    if not args.fast:
+        master_report["reports"]["testssl"] = get_testssl(args.url)
+    else:
+        master_report["reports"]["testssl"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
     
     # Run nmap and parse it
-    raw_nmap = get_nmap(args.url)
-    master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
+    if not args.fast:
+        raw_nmap = get_nmap(args.url)
+        master_report["reports"]["nmap"] = parse_nmap_xml(raw_nmap.get("xml_data")) if raw_nmap.get("status") == "success" else raw_nmap
+    else:
+        master_report["reports"]["nmap"] = {"status": "skipped", "details": "Skipped due to --fast flag."}
 
     # Run linkchecker and parse it
     raw_linkcheck = get_linkchecker(args.url)
@@ -507,6 +598,11 @@ def main():
             json.dump(master_report, f, indent=4)
         print(f"\n--- Scan Complete ---")
         print(f"[SUCCESS] Master report saved to {args.output}")
+        
+        # Print summary if requested
+        if args.summary:
+            print_summary(master_report)
+
     except IOError as e:
         print(f"\n--- Scan Complete ---", file=sys.stderr)
         print(f"[Error] Failed to write report file: {e}", file=sys.stderr)
