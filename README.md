@@ -101,8 +101,8 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
 
 You will need to have Python 3.9+ installed, as well as the following command-line tools:
 
-* nmap (Must be in your system PATH)
-* git (to clone this repo and testssl.sh)
+* **nmap** (Must be in your system PATH)
+* **git** (to clone this repo and testssl.sh)
 
 
 ### Installation
@@ -113,7 +113,7 @@ git clone https://github.com/KnowOneActual/web-health-scanner.git
 cd web-health-scanner 
 ````
 
-2.  **Clone testssl.sh:** This must be cloned into the main directory for the scanner to find it.(--depth flag 1 to make the download faster and smaller).
+2.  **Clone testssl.sh:** This must be cloned into the main directory for the scanner to find it. (--depth flag 1 to make the download faster and smaller).
 
 ```bash
 git clone --depth 1 https://github.com/drwetter/testssl.sh.git
@@ -128,6 +128,8 @@ pip install -r requirements.txt
 4.  Get a PageSpeed API Key (Optional but Recommended):
     The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
 
+
+
   * Go to the [Google Cloud credentials page](https://console.cloud.google.com/apis/credentials).
   * Create an API key and ensure the **PageSpeed Insights API** is enabled for your project.
 
@@ -141,10 +143,11 @@ You can set the key as an environment variable to avoid it being saved in your s
 
 ```bash
 export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
-python scanner.py [https://example.com](https://example.com) --summary
+python scanner.py https://example.com --summary
 ```
 
-### Method 2: Command-Line Flag (Less Secure). Please exercise caution with your API; in this method, your Key is recorded in the command history. 
+### Method 2: Command-Line Flag (Less Secure) **Please exercise caution with your API; in this method, your Key is recorded in the command history.**
+
 
 ```bash
 python scanner.py https://example.com --output report.json --api-key "YOUR_API_KEY_HERE"

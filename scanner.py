@@ -3,7 +3,7 @@ import json
 import os
 import subprocess
 import sys
-import shutil  # Added for dependency checking
+import shutil
 import requests
 import dns.resolver
 import tempfile 
@@ -18,6 +18,9 @@ from webtech.utils import ConnectionException
 # Paths to local tools
 TESTSSL_PATH = "./testssl.sh/testssl.sh"
 NMAP_PATH = "nmap"
+
+# Define the default output filename here
+DEFAULT_OUTPUT_FILENAME = "report.json" 
 
 
 # --- Helper Functions ---
@@ -131,7 +134,7 @@ def parse_pagespeed(raw_data):
 
         performance = get_score('performance')
         accessibility = get_score('accessibility')
-        best_practices = get_score('best-practices')
+        best_practices = get_score('best_practices')
         seo = get_score('seo')
 
         return {
@@ -299,7 +302,6 @@ def get_tech_stack(target_url):
             }
             
         # Case 2: Library returns a String (The "Google" bug)
-        # We need to parse the human-readable text manually
         elif isinstance(report, str):
             tech_names = []
             lines = report.split('\n')
@@ -357,24 +359,34 @@ def get_pagespeed(target_url, api_key):
     
     try:
         response = requests.get(api_url, params=params, timeout=60)
+        response.raise_for_status() # Raise exception for bad status codes (4xx or 5xx)
         
-        if response.status_code == 200:
-            data = response.json()
-            data['status'] = 'success'
-            return data
-        else:
-            try:
-                error_data = response.json()
-                error_msg = error_data.get("error", {}).get("message", response.text)
-                print(f"[Error] PageSpeed API failed: {error_msg}", file=sys.stderr)
-                return {"status": "error", "details": f"API Error: {error_msg}"}
-            except json.JSONDecodeError:
-                print(f"[Error] PageSpeed API returned status {response.status_code}", file=sys.stderr)
-                return {"status": "error", "details": f"API returned status {response.status_code}"}
-                
-    except requests.exceptions.RequestException as e:
+        # Success path
+        data = response.json()
+        data['status'] = 'success'
+        return data
+        
+    except requests.exceptions.HTTPError as e:
+        # Handle specific HTTP errors (like 400 Bad Request, 429 Rate Limit, 500 Server Error)
+        error_msg = f"HTTP Error {e.response.status_code}: {e.response.reason}"
+        try:
+            # Try to get the detailed error message from the JSON body
+            error_data = e.response.json()
+            error_msg = error_data.get("error", {}).get("message", error_msg)
+        except json.JSONDecodeError:
+            pass # Use the default HTTP error message if response isn't JSON
+        print(f"[Error] PageSpeed API failed: {error_msg}", file=sys.stderr)
+        return {"status": "error", "details": f"API Error: {error_msg}"}
+
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        # Handle connection, timeout, or general request errors
         print(f"[Error] Could not connect to PageSpeed API: {e}", file=sys.stderr)
         return {"status": "error", "details": f"API request failed: {str(e)}"}
+    
+    except json.JSONDecodeError:
+        # Should be caught by HTTPError above, but good as a fallback
+        print("[Error] Failed to decode JSON response from PageSpeed API.", file=sys.stderr)
+        return {"status": "error", "details": "Invalid JSON response from API."}
 
 def analyze_security_headers(target_url):
     """Fetches headers using 'requests' and checks for key security headers."""
@@ -393,13 +405,18 @@ def analyze_security_headers(target_url):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36'
         }
+        # Use a GET request, as some servers don't respond to HEAD
+        # Follow redirects to get the headers from the *final* destination
         response = requests.get(target_url, headers=headers, timeout=10, allow_redirects=True)
+        response.raise_for_status() # Check for bad status codes 
+        
         response_headers = response.headers
 
         missing_headers = []
         found_headers = []
 
         for header in HEADERS_TO_CHECK:
+            # Check headers case-insensitively
             if header in response_headers:
                 found_headers.append(header)
             else:
@@ -413,6 +430,7 @@ def analyze_security_headers(target_url):
         }
 
     except requests.exceptions.RequestException as e:
+        # This catches all requests errors: ConnectionError, Timeout, HTTPError, etc.
         print(f"[Error] Failed to fetch headers for scan: {e}", file=sys.stderr)
         return {"status": "error", "details": f"Failed to fetch {target_url}: {str(e)}"}
     except Exception as e:
@@ -493,15 +511,24 @@ def get_linkchecker(target_url):
             link_info = {"url": full_url, "status_code": None, "status": "pending"}
 
             try:
+                # Use a HEAD request for speed, but follow redirects
                 link_response = requests.head(full_url, headers=headers, timeout=5, allow_redirects=True)
                 link_info["status_code"] = link_response.status_code
+                link_response.raise_for_status() # Check for bad status codes
                 
+                # Only check for broken if status check didn't fail
                 if link_response.status_code >= 400:
                     link_info["status"] = "broken"
                     broken_links.append(link_info)
                 else:
                     link_info["status"] = "valid"
+            except requests.exceptions.HTTPError as he:
+                # Catches 4xx, 5xx errors
+                link_info["status"] = "broken"
+                link_info["status_code"] = he.response.status_code
+                broken_links.append(link_info)
             except requests.exceptions.RequestException:
+                # Catches ConnectionError, Timeout, etc.
                 link_info["status"] = "unreachable"
                 broken_links.append(link_info)
             
@@ -551,9 +578,29 @@ def get_dns_records(target_url):
 # --- Main Execution ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Run a full website health check.")
+    # Use RawTextHelpFormatter to preserve line breaks and spacing in epilog
+    parser = argparse.ArgumentParser(
+        description="Run a full website health check and audit.",
+        formatter_class=argparse.RawTextHelpFormatter,
+        epilog="""
+EXAMPLES:
+  # 1. Full Scan (Default mode, includes slow scans: nmap & testssl.sh)
+  #    Output file is automatically named (e.g., site-scan-example-com-YYYYMMDD_HHMMSS.json)
+  python scanner.py https://example.com
+
+  # 2. Fast Scan & Summary (Skips slow scans, prints readable summary)
+  python scanner.py https://example.com --fast --summary
+
+  # 3. Full Scan & Custom Output Filename
+  python scanner.py https://example.com --output my_custom_report.json
+
+  # 4. Using an API Key for PageSpeed Insights (Recommended)
+  python scanner.py https://example.com --api-key AIzaSy...
+"""
+    )
+    
     parser.add_argument("url", type=str, help="The target URL to scan (e.g., https://example.com)")
-    parser.add_argument("--output", type=str, default="report.json", help="The filename for the JSON output report.")
+    parser.add_argument("--output", type=str, default=DEFAULT_OUTPUT_FILENAME, help="The filename for the JSON output report.")
     parser.add_argument("--api-key", type=str, default=os.environ.get('PAGESPEED_API_KEY'), 
                         help="Google PageSpeed API key. Can also be set via PAGESPEED_API_KEY environment variable.")
     parser.add_argument("--summary", action="store_true", help="Print a human-readable summary of results to the terminal.")
@@ -564,11 +611,15 @@ def main():
     # v1.0 Polish: Check dependencies immediately after parsing arguments
     check_dependencies(skip_slow_tools=args.fast)
 
+    # Clean up URL for scanning and reporting
     if not args.url.startswith(('http://', 'https://')):
         print(f"[INFO] No scheme provided, defaulting to https://")
         args.url = f"https://{args.url}"
     
     args.url = args.url.rstrip(')/"')
+    
+    # Get hostname early for use in file naming
+    target_hostname = urlparse(args.url).hostname.replace('www.', '')
 
     print(f"--- Starting full scan for {args.url} ---")
     if args.fast:
@@ -588,12 +639,10 @@ def main():
         }
     }
 
-    # Run each scan
+    # Run scans...
     master_report["reports"]["tech_stack"] = get_tech_stack(args.url)
-    
     raw_pagespeed = get_pagespeed(args.url, args.api_key)
     master_report["reports"]["pagespeed"] = parse_pagespeed(raw_pagespeed)
-    
     master_report["reports"]["security_headers"] = analyze_security_headers(args.url)
     
     if not args.fast:
@@ -611,8 +660,19 @@ def main():
     raw_dns = get_dns_records(args.url)
     master_report["reports"]["dns"] = parse_dns_records(raw_dns)
 
-    master_report["scan_timestamp"] = datetime.now().isoformat()
-
+    # Set the timestamp just before writing
+    timestamp = datetime.now()
+    master_report["scan_timestamp"] = timestamp.isoformat()
+    
+    # --- File Naming Logic ---
+    if args.output == DEFAULT_OUTPUT_FILENAME:
+        # Format the time for a clean filename
+        time_str = timestamp.strftime("%Y%m%d_%H%M%S")
+        # Sanitize hostname to replace illegal chars and dots with hyphens
+        safe_hostname = target_hostname.replace('.', '-')
+        args.output = f"site-scan-{safe_hostname}-{time_str}.json"
+        
+    # Write the final report
     try:
         with open(args.output, 'w', encoding='utf-8') as f:
             json.dump(master_report, f, indent=4)

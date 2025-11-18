@@ -5,10 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.0] - 2025-11-18
 
-### Planned
-- v1.0 Polish (Dependency checks, detailed README).
+### Added
+- Robust, detailed usage examples to the CLI `--help` output.
+
+### Changed
+- Improved error handling across all API calls (`requests` exceptions) and link checks for a more stable experience.
+- Implemented a persistent fix for the `webtech` module issue, allowing it to correctly parse text reports into structured data.
+
+### Fixed
+- Fixed an issue where the report file name would be generic; now auto-generates descriptive filenames (e.g., `site-scan-example-com-YYYYMMDD_HHMMSS.json`) when `--output` is not specified.
 
 ## [0.3.0] - 2025-11-18
 
@@ -19,12 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `print_summary` function to format JSON data for the console.
 
 ### Changed
-- Enabled `testssl.sh` scan by default (unless `--fast` is used).
-- Enabled `nmap` scan by default (unless `--fast` is used).
+- Enabled `testssl.sh` and `nmap` scans by default (unless `--fast` is used).
 - Script now attempts to make `testssl.sh` executable automatically if permission is denied.
 
 ### Fixed
-- Fixed a crash where `testssl` output was a list instead of a dict, which broke the report parser.
+- Fixed a bug where `testssl.sh` output was a raw list, which broke the report parser; now correctly wrapped in a dictionary with a status key.
 
 ## [0.2.0] - 2025-11-17
 
