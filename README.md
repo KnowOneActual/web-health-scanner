@@ -20,15 +20,12 @@ The goal is to create a simple, free tool that anyone can use to get a deep-leve
 
 ## Features (Checks Performed)
 
-
-
 * **Performance:** Full Google Lighthouse audit via PageSpeed Insights.
-* **Privacy & Trackers:** Scans for ad trackers, cookies, and fingerprinting tech.
-* **General Tech Stack:** Identifies server tech, cookies, redirects, and more.
-* **Broken Links:** Crawls the site to find 404s and other broken links.
-* **Security Headers:** Analyzes HTTP security headers for missing or misconfigured settings.
-* **Network & Ports:** Scans for open ports and services.
-* **SSL/TLS Config:** Runs a deep analysis of the SSL/TLS certificate and server configuration.
+* **General Tech Stack:** Identifies server tech and client technologies.
+* **Broken Links:** Crawls the site's homepage to find 404s and other broken links.
+* **Security Headers:** Analyzes HTTP security headers for missing or misconfigured settings (Native scan).
+* **Network & Ports:** Scans for open ports and services (Skipped in `--fast` mode).
+* **SSL/TLS Config:** Runs a deep analysis of the SSL/TLS certificate and server configuration (Skipped in `--fast` mode).
 * **DNS Records:** Dumps all major DNS records (MX, TXT, SPF, etc.).
 
 
@@ -55,19 +52,19 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
    </td>
   </tr>
   <tr>
-   <td><a href="https://web-check.xyz/web-check-api">web-check.xyz</a>
+   <td>webtech library
    </td>
-   <td>General Tech Stack & Trackers
+   <td>General Tech Stack
    </td>
-   <td>API
+   <td>Python Library
    </td>
   </tr>
   <tr>
-   <td><a href="https://github.com/juerkkil/secheaders">secheaders</a>
+   <td>Native Requests/Python
    </td>
-   <td>Security Headers
+   <td>Security Headers & Link Checker
    </td>
-   <td>Local Tool
+   <td>Native Code
    </td>
   </tr>
   <tr>
@@ -75,7 +72,7 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
    </td>
    <td>SSL/TLS Config
    </td>
-   <td>Local Tool
+   <td>Local Tool (Bash)
    </td>
   </tr>
   <tr>
@@ -83,15 +80,7 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
    </td>
    <td>Network & Port Scan
    </td>
-   <td>Local Tool
-   </td>
-  </tr>
-  <tr>
-   <td>LinkChecker
-   </td>
-   <td>Broken Links
-   </td>
-   <td>Python Library
+   <td>Local Tool (System)
    </td>
   </tr>
   <tr>
@@ -105,7 +94,6 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
 </table>
 
 
-
 ## 🚀 Getting Started
 
 
@@ -113,64 +101,62 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
 
 You will need to have Python 3.9+ installed, as well as the following command-line tools:
 
-
-
-* nmap
+* nmap (Must be in your system PATH)
 * git (to clone this repo and testssl.sh)
 
 
 ### Installation
 
-
-
-1. **Clone this repo:** 
+1.  **Clone this repo:**
 ```bash
-git clone https://github.com/KnowOneActual/web-health-scanner.git)
+git clone https://github.com/KnowOneActual/web-health-scanner.git
 cd web-health-scanner 
+````
+
+2.  **Clone testssl.sh:** This must be cloned into the main directory for the scanner to find it.(--depth flag 1 to make the download faster and smaller).
+
+```bash
+git clone --depth 1 https://github.com/drwetter/testssl.sh.git
 ```
 
-2. **Clone testssl.sh:** 
-```bash
-git clone https://github.com/testssl/testssl.sh.git
-```
-3. **Install Python requirements:**
+3.  **Install Python requirements:**
+
 ```bash
 pip install -r requirements.txt
 ```
 
-4. Get a PageSpeed API Key (Optional but Recommended):
-The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
-    * Go to the [Google Cloud credentials page](https://console.cloud.google.com/apis/credentials).
-    * Create a new project (or select an existing one).
-    * Click "Create Credentials" -> "API key".
-    * Copy the generated key.
-    * You must also [enable the PageSpeed Insights API](https://www.google.com/search?q=httpsD://console.cloud.google.com/apis/library/pagespeedonline.googleapis.com) for your project.
+4.  Get a PageSpeed API Key (Optional but Recommended):
+    The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
 
+  * Go to the [Google Cloud credentials page](https://console.cloud.google.com/apis/credentials).
+  * Create an API key and ensure the **PageSpeed Insights API** is enabled for your project.
 
 ## Usage
 
-Run the scanner.
-
+Run the scanner. All scans are run by default unless you use the `--fast` flag.
 
 ### Method 1: Environment Variable (Recommended & Secure)
 
 You can set the key as an environment variable to avoid it being saved in your shell history.
+
 ```bash
 export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
-python scanner.py https://example.com
+python scanner.py [https://example.com](https://example.com) --summary
 ```
 
-
-### Method 2: Command-Line Flag (Less Secure)
-
-You can also pass the key as a flag, but be aware that it will be saved in your shell's history. (Be please exercise caution with your API keys!)
+### Method 2: Command-Line Flag (Less Secure). Please exercise caution with your API; in this method, your Key is recorded in the command history. 
 
 ```bash
-python scanner.py [https://example.com](https://example.com) --output report.json --api-key "YOUR_API_KEY_HERE"
+python scanner.py https://example.com --output report.json --api-key "YOUR_API_KEY_HERE"
 ```
 
+### Options
 
+| Flag | Description |
+| :--- | :--- |
+| `--summary` | Prints a clean, human-readable summary to the terminal after saving the full JSON report. |
+| `--fast` | Skips the two slow scans (`nmap` and `testssl.sh`) for a rapid health check. |
 
 ## License
 
-Distributed under the MIT License. See LICENSE.txt for more information.
+Distributed under the MIT License. See `LICENSE` for more information.
