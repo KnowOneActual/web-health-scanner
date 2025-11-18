@@ -1,0 +1,44 @@
+name: Python Code Style (Black)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  format_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Required for black to commit changes
+          fetch-depth: 0
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: 🛠️ Install dependencies
+        run: pip install black
+
+      - name: 🔍 Run Black Check
+        id: black-check
+        # Check that the code is already formatted correctly.
+        # This will fail the check if any files need formatting.
+        run: black --check .
+
+      - name: ✅ Code is Formatted (Skipped if check failed)
+        if: success()
+        run: echo "Code passes black formatting check."
+
+      - name: ⚠️ Show files requiring formatting
+        if: failure() && steps.black-check.outcome == 'failure'
+        run: |
+          echo "Black check failed. The following files need formatting:"
+          black --diff .
+          # We explicitly fail the job here if black found issues
+          exit 1
