@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-01
+
+### Added
+- **Plugin-based Architecture:** Completely refactored the scanner logic into an extensible plugin system.
+    - `BaseScanner` class for building new checks.
+    - `ScannerRegistry` for automated scanner management and execution.
+    - Centralized `scanners/` package for easy contribution of new tools.
+- **Improved Code Organization:** Separated scanner logic, UI formatting, and utility functions into dedicated modules (`scanners/`, `utils.py`, `cli.py`).
+
+### Changed
+- Refactored `cli.py` to use the plugin registry for all scanning operations.
+- Updated `linkchecker` and `nmap` plugins with internal refinements.
+
 ## [1.2.0] - 2026-03-01
 
 ### Added

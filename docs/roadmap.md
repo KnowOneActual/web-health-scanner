@@ -8,7 +8,11 @@ To provide developers, hobbyists, and site owners with a single, free, and open-
 
 ### ✅ Completed Milestones
 
-#### [v1.2] Concurrency & Modern UI (Latest)
+#### [v2.0] Architecture & Extensibility (Latest)
+- **Plugin System:** Refactored scanners into a class-based registry, making adding new checks (e.g., WordPress-specific, SEO-deep-dive) trivial.
+- **Improved Codebase:** Separated core logic from CLI orchestration.
+
+#### [v1.2] Concurrency & Modern UI
 - **Parallel Scanning:** Implemented `ThreadPoolExecutor` to run all independent scans simultaneously, reducing execution time by ~70%.
 - **Rich Terminal UI:** Integrated the `rich` library for real-time progress bars, beautiful tables, and panels.
 - **Optimized Scanning:** Refined the link checker to focus on homepage health for faster reporting.
@@ -27,8 +31,7 @@ To provide developers, hobbyists, and site owners with a single, free, and open-
 
 ### 🚀 Future Goals
 
-#### v2.0: Architecture & Extensibility
-*   [ ] **Plugin System:** Refactor scanners into a class-based registry to make adding new checks (e.g., WordPress-specific, SEO-deep-dive) trivial.
+#### v2.0: Configuration & Setup
 *   [ ] **Configuration:** Add support for a `config.yaml` to allow users to define custom scan profiles and API keys permanently.
 *   [ ] **One-Command Setup:** Implement a `web-health-scanner --setup` command to automatically download and configure `testssl.sh` and other local tools.
 
