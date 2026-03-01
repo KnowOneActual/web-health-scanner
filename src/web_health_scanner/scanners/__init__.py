@@ -1,12 +1,12 @@
 from .base import registry
 from .plugins import (
-    TechStackScanner,
+    DNSScanner,
+    LinkCheckerScanner,
+    NmapScanner,
     PageSpeedScanner,
     SecurityHeadersScanner,
-    LinkCheckerScanner,
-    DNSScanner,
-    NmapScanner,
-    TestSSLScanner
+    TechStackScanner,
+    TestSSLScanner,
 )
 
 # Register default plugins

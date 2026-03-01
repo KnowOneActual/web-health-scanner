@@ -1,7 +1,8 @@
-import unittest
+import os
 import subprocess
 import sys
-import os
+import unittest
+
 
 class TestCLI(unittest.TestCase):
     def setUp(self):
@@ -15,10 +16,11 @@ class TestCLI(unittest.TestCase):
             [sys.executable, "-m", "web_health_scanner", "--help"],
             capture_output=True,
             text=True,
-            env=self.env
+            env=self.env,
         )
         self.assertEqual(result.returncode, 0)
         self.assertIn("Run a full website health check and audit.", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

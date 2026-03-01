@@ -27,4 +27,4 @@ python3 -m unittest discover tests
 
 ## Code Style
 
-We use `black` for code formatting. Please ensure your code is formatted before submitting a pull request.
+We use `ruff` for code formatting and linting. Please ensure your code is formatted before submitting a pull request.

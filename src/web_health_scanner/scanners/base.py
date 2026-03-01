@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class BaseScanner(ABC):
     """Base class for all website health scanners."""
 
@@ -12,6 +13,7 @@ class BaseScanner(ABC):
     def run(self, target_url, **kwargs):
         """Execute the scan and return a report dictionary."""
         pass
+
 
 class ScannerRegistry:
     """Manages the registration and execution of scanner plugins."""
@@ -30,6 +32,7 @@ class ScannerRegistry:
         if fast_only:
             return [s for s in self._scanners if s.is_fast]
         return self._scanners
+
 
 # Global registry instance
 registry = ScannerRegistry()
