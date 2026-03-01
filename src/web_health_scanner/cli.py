@@ -846,16 +846,16 @@ def main():
 EXAMPLES:
   # 1. Full Scan (Default mode, includes slow scans: nmap & testssl.sh)
   #    Output file is automatically named (e.g., site-scan-example-com-YYYYMMDD_HHMMSS.json)
-  python scanner.py https://example.com
+  python -m web_health_scanner https://example.com
 
   # 2. Fast Scan & Summary (Skips slow scans, prints readable summary)
-  python scanner.py https://example.com --fast --summary
+  python -m web_health_scanner https://example.com --fast --summary
 
   # 3. Full Scan & Custom Output Filename
-  python scanner.py https://example.com --output my_custom_report.json
+  python -m web_health_scanner https://example.com --output my_custom_report.json
 
   # 4. Using an API Key for PageSpeed Insights (Recommended)
-  python scanner.py https://example.com --api-key AIzaSy...
+  python -m web_health_scanner https://example.com --api-key AIzaSy...
 """,
     )
 

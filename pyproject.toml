@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "web-health-scanner"
+version = "1.1.0"
+description = "A simple, command-line tool to run a comprehensive health check and audit on any website."
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "KnowOneActual"}
+]
+dependencies = [
+    "LinkChecker",
+    "requests",
+    "dnspython",
+    "webtech",
+    "beautifulsoup4",
+    "lxml",
+    "colorama",
+    "defusedxml",
+]
+
+[project.scripts]
+web-health-scanner = "web_health_scanner.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["web_health_scanner*"]

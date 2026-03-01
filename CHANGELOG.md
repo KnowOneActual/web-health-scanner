@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-03-01
+
+### Added
+- **Modernized Project Structure:** Implemented a standard `src/` layout with `web_health_scanner` package.
+- **Project Metadata:** Added `pyproject.toml` for standard packaging and dependency management.
+- **Testing Suite:** Initialized `tests/` directory with `unittest` suite for CLI verification.
+- **Package Entry Points:** Added `web-health-scanner` command-line script and `python -m web_health_scanner` support.
+
+### Changed
+- **Reorganized Documentation:** Moved `Security_Audit_Log.md` to `docs/security_audit_log.md` and updated `README.md` with modern usage instructions.
+- **Workflow Optimization:** Updated GitHub Actions to target new directory structure.
+
 ## [1.0.2] - 2025-11-18
 
 ### Fixed

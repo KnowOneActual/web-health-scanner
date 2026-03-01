@@ -65,3 +65,13 @@ This roadmap outlines the planned stages for building the site-checkup tool.
 * [X] **Documentation:** Finalized the `README.md` and added detailed examples to the `--help` output.
 * [X] **License:** License file is present and correct.
 * [X] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run `black` code formatter).
+
+
+### v1.1: Reorganization & Modernization (Complete)
+
+**Goal:** Transition to a professional Python package structure and improve developer experience.
+
+* [X] **Source Layout:** Move to `src/` layout with `web_health_scanner` package.
+* [X] **Modern Packaging:** Implement `pyproject.toml` for dependency and entry-point management.
+* [X] **Testing:** Establish a `tests/` directory with automated CLI verification.
+* [X] **Documentation:** Consolidate logs and update documentation for the new structure.

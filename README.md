@@ -35,7 +35,7 @@ To make the project better and more reliable, a **strategic pivot** was necessar
 
 ### Key Learnings & Improvements
 
-This pivot resulted in significant architectural upgrades, leading to the stable **v1.0.2** release:
+This pivot resulted in significant architectural upgrades, leading to the stable **v1.1.0** release:
 
 * **From Scraping to Libraries/APIs:** I replaced fragile custom parsing with calls to stable APIs (Google PageSpeed) and robust Python libraries (`webtech`, `dnspython`, `requests`, `BeautifulSoup`) to gather data.
 * **Best Security Practices:** The code underwent a comprehensive audit to implement defenses against critical vulnerabilities:
@@ -95,7 +95,7 @@ You will need to have Python 3.9+ installed, as well as the following command-li
 
 3.  **Install Python requirements:**
     ```bash
-    pip install -r requirements.txt
+    pip install -e .
     ```
 
 4.  Get a PageSpeed API Key (Optional but Recommended): The PageSpeed (Lighthouse) scan will be skipped unless you provide an API key.
@@ -113,13 +113,13 @@ You can set the key as an environment variable to avoid it being saved in your s
 
 ```bash
 export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
-python scanner.py [https://example.com](https://example.com) --summary
+python -m web_health_scanner [https://example.com](https://example.com) --summary
 ````
 
 ### Method 2: Command-Line Flag (Less Secure) **Please exercise caution with your API; in this method, your Key is recorded in the command history.**
 
 ```bash
-python scanner.py https://example.com --output report.json --api-key "YOUR_API_KEY_HERE"
+python -m web_health_scanner https://example.com --output report.json --api-key "YOUR_API_KEY_HERE"
 ```
 
 ### Options
