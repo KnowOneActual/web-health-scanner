@@ -116,7 +116,7 @@ You can set the key as an environment variable to avoid it being saved in your s
 
 ```bash
 export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
-python -m web_health_scanner [https://example.com](https://example.com) --summary
+python -m web_health_scanner https://example.com --summary
 ````
 
 ### Method 2: Command-Line Flag (Less Secure) **Please exercise caution with your API; in this method, your Key is recorded in the command history.**
