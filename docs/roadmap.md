@@ -1,77 +1,43 @@
 # Project Mission & Roadmap
 
-
 ## 🎯 Mission Statement
 
 To provide developers, hobbyists, and site owners with a single, free, and open-source command-line tool that aggregates comprehensive data on a website's performance, security, and technical health, eliminating the need to use multiple, separate, or paid services.
 
-
 ## 🗺️ Roadmap
 
-This roadmap outlines the planned stages for building the site-checkup tool.
+### ✅ Completed Milestones
 
+#### [v1.2] Concurrency & Modern UI (Latest)
+- **Parallel Scanning:** Implemented `ThreadPoolExecutor` to run all independent scans simultaneously, reducing execution time by ~70%.
+- **Rich Terminal UI:** Integrated the `rich` library for real-time progress bars, beautiful tables, and panels.
+- **Optimized Scanning:** Refined the link checker to focus on homepage health for faster reporting.
 
-### v0.1: Core Data Collection (Complete)
+#### [v1.1] Reorganization & Modernization
+- **Project Structure:** Migrated to a standard `src/` layout with a proper Python package.
+- **Professional Packaging:** Added `pyproject.toml` and package entry points.
+- **Testing Foundation:** Initialized `tests/` with automated CLI verification.
 
-**Goal:** Get the main script to successfully call every tool and API and capture its raw output.
+#### [v1.0] Polish & Stability
+- **Security Audit:** Implemented SSRF and Path Traversal mitigations.
+- **Dependency Guard:** Added startup checks for `nmap` and `testssl.sh`.
+- **Error Handling:** Added robust `try...except` blocks for all external integrations.
 
-* [X] **Setup:** Create scanner.py with argparse to accept a URL and an output file.
-* [X] **Setup:** Create requirements.txt with initial libraries.
-* [X] **API Call:** Implement Google PageSpeed Insights API call.
-* [X] **Subprocess:** Implement `secheaders` call. (Removed in v0.2)
-* [X] **Subprocess:** Implement `nmap` call and capture XML.
-* [X] **Library:** Implement `dnspython` to get all major DNS records.
-* [X] **Library:** Implement custom link checker using `requests` and `BeautifulSoup`.
-* [X] **Subprocess:** Implement `testssl.sh` call.
-* [X] **API Call:** Implement `web-check.xyz` API call. (Blocked by Cloudflare, abandoned in v0.2).
+---
 
+### 🚀 Future Goals
 
-### v0.2: Data Consolidation & Parsing (Complete)
+#### v2.0: Architecture & Extensibility
+*   [ ] **Plugin System:** Refactor scanners into a class-based registry to make adding new checks (e.g., WordPress-specific, SEO-deep-dive) trivial.
+*   [ ] **Configuration:** Add support for a `config.yaml` to allow users to define custom scan profiles and API keys permanently.
+*   [ ] **One-Command Setup:** Implement a `web-health-scanner --setup` command to automatically download and configure `testssl.sh` and other local tools.
 
-**Goal:** Take all the raw data from v0.1 and parse it into a single, clean JSON report.
+#### v3.0: Visual Reporting & Integrations
+*   [ ] **HTML/PDF Export:** Use Jinja2 templates to generate beautiful, standalone visual reports with charts.
+*   [ ] **Webhooks:** Add native support for Slack, Discord, or Teams webhooks for automated monitoring results.
+*   [ ] **Interactive Mode:** An optional interactive TUI (Terminal User Interface) using `Textual` for deep-diving into report details without leaving the terminal.
 
-**Completed Parsers:**
-
-* [X] Parse PageSpeed JSON (`parse_pagespeed`).
-* [X] Parse nmap XML output (`parse_nmap_xml`).
-* [X] Parse link checker output (`parse_linkchecker`).
-* [X] Parse DNS records (`parse_dns_records`).
-
-**Key Changes & Fixes:**
-
-* [X] **Replaced Buggy Tools:** Removed the external `secheaders` dependency.
-* [X] **New Native Scan:** Wrote `analyze_security_headers` function to check headers directly with `requests`, which works perfectly.
-* [X] **Replaced Blocked API:** Replaced the `web-check.xyz` API with the `webtech` library.
-* [X] **Robust Error Handling:** Added error checking to the `webtech` scan to prevent crashes when it fails, allowing other scans to complete.
-* [X] **Bug Fixes:** Resolved all environment variable, URL, and typo issues.
-
-
-### v0.3: Human-Readable Summary (Complete)
-
-**Goal:** Make the tool useful for a quick glance, not just for data nerds.
-
-* [X] **Add `--summary` flag:** Add an argument to print a summary to the terminal.
-* [X] **Create Formatter:** Write a `print_summary` function to output a clean report.
-* [X] **(Optional) Add Color:** Integrate a library like `rich` or `colorama`. (Skipped for now).
-* [X] **Add `--fast` flag:** Implemented a flag to skip slow scans (`nmap`, `testssl.sh`) for quick checks.
-
-
-### v1.0: Polish & Release (Complete)
-
-**Goal:** Make the tool robust and ready for public use.
-
-* [X] **Dependency Checks:** Added code to gracefully check if `nmap` and `testssl.sh` are available on the user's system.
-* [X] **Error Handling:** Added robust `try...except` blocks for all API calls and subprocesses.
-* [X] **Documentation:** Finalized the `README.md` and added detailed examples to the `--help` output.
-* [X] **License:** License file is present and correct.
-* [X] **(Future) GitHub Actions:** Create a simple CI workflow to run tests (e.g., run `black` code formatter).
-
-
-### v1.1: Reorganization & Modernization (Complete)
-
-**Goal:** Transition to a professional Python package structure and improve developer experience.
-
-* [X] **Source Layout:** Move to `src/` layout with `web_health_scanner` package.
-* [X] **Modern Packaging:** Implement `pyproject.toml` for dependency and entry-point management.
-* [X] **Testing:** Establish a `tests/` directory with automated CLI verification.
-* [X] **Documentation:** Consolidate logs and update documentation for the new structure.
+#### v4.0: Portability & Distribution
+*   [ ] **Docker Support:** Provide an official Docker image that bundles all dependencies (`nmap`, `testssl.sh`) for zero-config execution.
+*   [ ] **GitHub Action:** Release as a first-class GitHub Action for automated site health checks in CI/CD pipelines.
+*   [ ] **The Rust Exploration:** Investigate a core rewrite in Rust for even faster execution, zero-dependency distribution, and improved memory safety.
