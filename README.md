@@ -110,27 +110,37 @@ You will need to have Python 3.9+ installed, as well as the following command-li
 
 Run the scanner. All scans are run by default unless you use the `--fast` flag.
 
-### Method 1: Environment Variable (Recommended & Secure)
+### Method 1: Interactive Mode (Easiest)
+Just run the command, and it will prompt you for the URL.
+```bash
+whs
+```
 
-You can set the key as an environment variable to avoid it being saved in your shell history.
+### Method 2: Configuration File (Recommended)
+1. Copy `.env.example` to `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Add your `PAGESPEED_API_KEY` to the `.env` file.
+3. Run the scanner on any URL:
+   ```bash
+   whs https://example.com
+   ```
+
+### Method 3: Command-Line Flags
+You can still provide everything via flags.
 
 ```bash
-export PAGESPEED_API_KEY="YOUR_API_KEY_HERE"
-whs https://example.com --summary
-````
-
-### Method 2: Command-Line Flag (Less Secure) **Please exercise caution with your API; in this method, your Key is recorded in the command history.**
-
-```bash
-whs https://example.com --output report.json --api-key "YOUR_API_KEY_HERE"
+whs https://example.com --api-key "YOUR_API_KEY_HERE"
 ```
 
 ### Options
 
 | Flag | Description |
 | :--- | :--- |
-| `--summary` | Prints a clean, human-readable summary to the terminal after saving the full JSON report. |
+| `--no-summary` | Disables the human-readable summary (only saves JSON). |
 | `--fast` | Skips the two slow scans (`nmap` and `testssl.sh`) for a rapid health check. |
+| `--output` | Specify a custom filename for the JSON report. |
 
 -----
 

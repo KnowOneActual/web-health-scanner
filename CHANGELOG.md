@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-03-01
+
+### Added
+- **Interactive Mode:** If `whs` is run without a URL, it now prompts the user to enter one.
+- **Config File Support:** Added support for a `.env` file to store the `PAGESPEED_API_KEY` (manual parser implemented to avoid new dependencies).
+- **Env Example:** Added `.env.example` as a template for configuration.
+
+### Changed
+- **Default to Summary:** The human-readable summary is now the default output.
+- **New Flag:** Added `--no-summary` to disable the console summary output.
+- **Usage Docs:** Updated README to reflect the streamlined workflow.
+
 ## [2.0.3] - 2026-03-01
 
 ### Added

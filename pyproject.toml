@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "web-health-scanner"
-version = "2.0.3"
+version = "2.1.0"
 description = "A simple, command-line tool to run a comprehensive health check and audit on any website."
 readme = "README.md"
 requires-python = ">=3.9"

@@ -139,9 +139,20 @@ def print_summary(report):
     console.print("\n" + "=" * 40 + "\n")
 
 
+def load_env(file_path=".env"):
+    """Simple manual .env loader to avoid extra dependencies."""
+    if os.path.exists(file_path):
+        with open(file_path) as f:
+            for line in f:
+                if "=" in line and not line.startswith("#"):
+                    k, v = line.strip().split("=", 1)
+                    os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+
+
 def main():
+    load_env()
     parser = argparse.ArgumentParser(description="Run a full website health check and audit.")
-    parser.add_argument("url", type=str, help="The target URL to scan")
+    parser.add_argument("url", type=str, nargs="?", help="The target URL to scan")
     parser.add_argument(
         "--output", type=str, default=DEFAULT_OUTPUT_FILENAME, help="JSON output report."
     )
@@ -151,10 +162,21 @@ def main():
         default=os.environ.get("PAGESPEED_API_KEY"),
         help="Google PageSpeed API key.",
     )
-    parser.add_argument("--summary", action="store_true", help="Print summary to terminal.")
+    parser.add_argument(
+        "--no-summary", action="store_true", help="Do not print summary to terminal."
+    )
     parser.add_argument("--fast", action="store_true", help="Skip slow scans (nmap, testssl).")
 
     args = parser.parse_args()
+
+    # Interactive mode if URL is missing
+    if not args.url:
+        console.print("[bold cyan]Welcome to Website Health Scanner (whs)![/bold cyan]")
+        args.url = console.input("[bold yellow]Enter a URL to scan: [/bold yellow]").strip()
+
+    if not args.url:
+        console.print("[bold red]Error:[/bold red] No URL provided. Exiting.")
+        sys.exit(1)
 
     missing = check_dependencies(NMAP_PATH, TESTSSL_PATH, skip_slow_tools=args.fast)
     if missing:
@@ -221,7 +243,7 @@ def main():
             f"\n[bold green]✓[/bold green] Master report saved to "
             f"[bold cyan]{safe_output_path}[/bold cyan]"
         )
-        if args.summary:
+        if not args.no_summary:
             print_summary(master_report)
     except Exception as e:
         console.print(f"[bold red]Error saving report:[/bold red] {e}")
