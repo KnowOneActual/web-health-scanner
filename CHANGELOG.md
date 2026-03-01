@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-03-01
+
+### Added
+- **Concurrent Execution:** Scans now run in parallel using `ThreadPoolExecutor`, significantly reducing the total execution time.
+- **Enhanced CLI UI:** Integrated the `rich` library for a modern terminal experience, including:
+    - Real-time progress bars for active scans.
+    - Beautifully formatted summary tables and panels.
+    - Color-coded status and scores.
+- **Link Checker Optimization:** Limited initial link check to the first 20 links for faster health reporting.
+
+### Changed
+- Replaced `colorama` with `rich` for all terminal output.
+- Refactored `cli.py` to support parallel scanning and better dependency error reporting.
+
 ## [1.1.0] - 2026-03-01
 
 ### Added

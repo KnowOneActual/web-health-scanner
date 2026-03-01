@@ -43,6 +43,7 @@ This pivot resulted in significant architectural upgrades, leading to the stable
     * **Path Traversal (PT) Mitigation:** I secured user-supplied file names to prevent arbitrary file writing.
     * **Insecure XML Parsing:** I adopted the secure `lxml` library to prevent XML External Entity (XXE) and Denial of Service attacks.
 * **Prioritizing Stability:** After the security fixes, I focused on resolving critical runtime bugs, such as XML parsing errors and SSL timeouts on CDN targets, confirming that all components now run reliably.
+* **Modernized UI & Speed:** Version 1.2.0 introduces parallel scanning for massive performance gains and a beautiful, modern CLI interface using the `rich` library.
 
 ***
 
@@ -50,7 +51,7 @@ This pivot resulted in significant architectural upgrades, leading to the stable
 
 * **Performance:** Full Google Lighthouse audit via PageSpeed Insights.
 * **General Tech Stack:** Identifies server tech and client technologies.
-* **Broken Links:** Crawls the site's homepage to find 404s and other broken links.
+* **Broken Links:** Crawls the site's homepage to find 404s and other broken links (optimized for speed).
 * **Security Headers:** Analyzes HTTP security headers for missing or misconfigured settings (Native scan).
 * **Network & Ports:** Scans for open ports and services (Skipped in `--fast` mode).
 * **SSL/TLS Config:** Runs a deep analysis of the SSL/TLS certificate and server configuration (Skipped in `--fast` mode).
@@ -68,6 +69,7 @@ This project is a "meta-tool" that couldn't exist without these amazing free ser
 | [testssl.sh](https://github.com/testssl/testssl.sh) | SSL/TLS Config | Local Tool (Bash) |
 | nmap | Network & Port Scan | Local Tool (System) |
 | dnspython | DNS Records | Python Library |
+| [Rich](https://github.com/Textualize/rich) | Beautiful Terminal UI | Python Library |
 
 ***
 
