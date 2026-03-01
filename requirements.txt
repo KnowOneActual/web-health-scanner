@@ -14,3 +14,7 @@ lxml
 colorama
 #safe XML parser
 defusedxml
+# Beautiful terminal UI
+rich
+# Fast linting and formatting
+ruff

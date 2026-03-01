@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2026-03-01
+
+### Fixed
+- **Environment Stability:** Resolved an issue where the application would not launch due to broken absolute paths in the virtual environment.
+- **Dependency Sync:** Synchronized `requirements.txt` with `pyproject.toml` to ensure all necessary libraries (`rich`, `ruff`) are installed.
+- **Python Compatibility:** Verified compatibility with Python 3.12 and updated documentation to recommend stable Python versions for macOS users to avoid SSL issues.
+
 ## [2.0.1] - 2026-03-01
 
 ### Changed
