@@ -43,7 +43,8 @@ This pivot resulted in significant architectural upgrades, leading to the stable
     * **Path Traversal (PT) Mitigation:** I secured user-supplied file names to prevent arbitrary file writing.
     * **Insecure XML Parsing:** I adopted the secure `lxml` library to prevent XML External Entity (XXE) and Denial of Service attacks.
 * **Prioritizing Stability:** After the security fixes, I focused on resolving critical runtime bugs, such as XML parsing errors and SSL timeouts on CDN targets, confirming that all components now run reliably.
-* **Modernized UI & Speed:** Version 1.2.0 introduces parallel scanning for massive performance gains and a beautiful, modern CLI interface using the `rich` library.
+* **Modernized UI & Speed:** Version 1.2.0 introduced parallel scanning for massive performance gains and a beautiful, modern CLI interface using the `rich` library.
+* **Architecture & Efficiency (v2.0):** The project was completely refactored into a modular plugin-based architecture for easy extensibility. We also switched to **Ruff** for linting and formatting, providing near-instantaneous code quality checks and significantly improved development efficiency.
 
 ***
 

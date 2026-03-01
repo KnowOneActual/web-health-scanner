@@ -80,10 +80,16 @@ A central security function, `resolve_and_validate_target`, was created and impl
       
 ## 4. Operational Security & Stability Confirmation
 
-
 All security mitigations implemented in v1.0.1 were verified to be fully operational and stable after subsequent runtime fixes.
 
 - **XXE/Nmap Stability:** The final configuration of the `lxml.etree` parser was confirmed to be both secure (non-DTD, non-networked) and syntactically correct, ensuring safe parsing of Nmap XML output.
 - **SSRF Stability & Compatibility:** The core SSRF validation logic in `resolve_and_validate_target` remains intact and is executed successfully for all networking components. The command for `testssl.sh` was successfully reverted to use the original hostname. This eliminated the 10-minute timeout by enabling correct **SNI handling** while maintaining the SSRF security guarantee that the hostname resolves to a public IP before the tool is executed.
 
-**Conclusion:** The project is fully compliant with all security mitigations implemented and is now stable across all intended functions.
+### 5. Architectural Security (v2.0)
+
+In version 2.0.0, the codebase was refactored into a **modular plugin system**. This significantly improves security by:
+- **Code Isolation:** Scanners are now isolated in their own classes, making it easier to audit individual components.
+- **Centralized Security Helpers:** Mitigation functions like `resolve_and_validate_target` are now centrally located in `utils.py`, ensuring consistent application across all current and future plugins.
+- **Static Analysis with Ruff:** We migrated the codebase to **Ruff** for linting and formatting. Ruff provides extremely fast and comprehensive static analysis, helping to catch potential security vulnerabilities (like insecure function calls or broad exception handling) instantly during development.
+
+**Conclusion:** The project is fully compliant with all security mitigations implemented and is now stable and architecturally robust.
